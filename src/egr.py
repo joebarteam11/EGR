@@ -136,10 +136,7 @@ class case:
             def __init__(self):
                 self.contents = None
 
-#
-#a=case('CH4:1.','O2:0.21,N2:0.78,AR:0.01','CO2:1.',3960.0)
-#print(a.compo.fuel)
-#
+
 def compute_mdots(config,phi):
     coef=0.05
     mdot_fuel = 0.016
@@ -154,7 +151,8 @@ def compute_mdots(config,phi):
 def create_reservoir(content, scheme, T, P):
     gas = ct.Solution(scheme)
     gas.TPX = T, P, content
-    return gas,ct.Reservoir(gas)
+    stream = ct.Quantity(gas)
+    return gas,ct.Reservoir(gas)#,stream
 
 def burned_gas(compo='O2:1., CH4:0.5',scheme='gri30.xml'):
     gas = ct.Solution(scheme)
@@ -178,6 +176,7 @@ def set_reservoirs_mdots(amont, mdots, aval):
 
 def compute_solutions(config,phi_range,print_report=False,real_egr=False):
     data=np.zeros((len(phi_range),4))
+    phi_bilger = np.zeros(len(phi_range))
     for phi in phi_range:
         gb = burned_gas()
         reactor = build_reactor(gb)
@@ -197,11 +196,12 @@ def compute_solutions(config,phi_range,print_report=False,real_egr=False):
             if print_mdot :
                 print(phi,reactor.T)
         '''
+        phi_bilger[np.where(phi_range==phi)] = reactor.thermo.equivalence_ratio()
         data[np.where(phi_range==phi), 0] = reactor.T
         data[np.where(phi_range==phi), 1] = reactor.thermo.heat_release_rate
         data[np.where(phi_range==phi), 2:] = reactor.thermo['O2', 'CO2'].Y
     print(str(data[:, 0]))
-    return reactor, data
+    return phi_bilger,reactor, data
 
 def print_reactor(reactor):
     print(reactor.thermo.report())

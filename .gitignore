@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *.code-workspace
-
+combustor.py
 # C extensions
 *.so
 
