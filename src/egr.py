@@ -197,8 +197,6 @@ def compute_solutions(config,phi_range,print_report=False,real_egr=False):
             if print_mdot :
                 print(phi,reactor.T)
         '''
-        if print_report:
-            print(exhaust.T)
         data[np.where(phi_range==phi), 0] = reactor.T
         data[np.where(phi_range==phi), 1] = reactor.thermo.heat_release_rate
         data[np.where(phi_range==phi), 2:] = reactor.thermo['O2', 'CO2'].Y

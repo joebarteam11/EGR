@@ -1,4 +1,4 @@
-import cantera as ct
+#import cantera as ct
 from egr import *
 
 config = case('CH4:1.',                     #fuel compo
@@ -19,7 +19,7 @@ egr_percentages = np.arange(0.00,0.25,0.05)
 for egr_rate in egr_percentages:
     config.egr_rate = egr_rate #override config.egr_rate set during object instanciation
     phi_range = np.arange(0.45,1.5,0.05)
-    reactor,results = compute_solutions(config,phi_range,print_report=False,real_egr=False)
+    reactor,results = compute_solutions(config,phi_range,print_report=False,real_egr=True)
     #print_reactor(reactor)
     subplot_data(phi_range,results,'Phi',['T[K]','HRR[W/m3]','Y_O2','Y_CO2'],'EGR'+config.egr_unit+'%:'+str(round(egr_rate*100,1))+'%')
 
