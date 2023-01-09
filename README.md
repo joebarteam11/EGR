@@ -1,4 +1,4 @@
-[![ci-python-unittest](https://github.com/joebarteam11/EGR0D/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/joebarteam11/EGR0D/actions/workflows/main.yml)
+[![ci-python-unittest](https://github.com/joebarteam11/EGR0D/actions/workflows/main.yml/badge.svg)](https://github.com/joebarteam11/EGR0D/actions/workflows/main.yml)
 
 # EGR0D
  Python library `egr.py` based on CANTERA to simplify EGR simulations.
