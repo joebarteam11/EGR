@@ -7,7 +7,7 @@ import colorama
 
 colorama.init()
 
-def get_ox_mdot(egr_percentage, ox_compo, egr_compo, mode='mdot_fixed', unit='vol', phi=1.0):
+def get_ox_mdot_v1(egr_percentage, ox_compo, egr_compo, mode='mdot_fixed', unit='vol', phi=1.0):
     try:
         if(phi<0.0 or phi>10.0):
             raise Exception('phi must be in range ]0.0 ; 10;0]')
@@ -53,7 +53,7 @@ def get_ox_mdot(egr_percentage, ox_compo, egr_compo, mode='mdot_fixed', unit='vo
 
 
 
-get_ox_mdot.__doc__="Calcule un débit massique a imposer en focntion du pourcentage de egr qu'on souhaite ajouter Ce pourcentage peut etre défini comme un pourcentage de 'remplacement' d'air : on va réduired'autant le débit d'air pour conserver un débit massique total constant défini par le débit d'air sans egr à la richesse souhaitée (mode mdot_ox_fixed) Il peut aussi être considéré comme un pourcentage de egr supplémentaire, défini comme un ajout de X% du débit d'air à la richesse considérée (mode mdot_ox_free)"
+get_ox_mdot_v1.__doc__="Calcule un débit massique a imposer en focntion du pourcentage de egr qu'on souhaite ajouter Ce pourcentage peut etre défini comme un pourcentage de 'remplacement' d'air : on va réduired'autant le débit d'air pour conserver un débit massique total constant défini par le débit d'air sans egr à la richesse souhaitée (mode mdot_ox_fixed) Il peut aussi être considéré comme un pourcentage de egr supplémentaire, défini comme un ajout de X% du débit d'air à la richesse considérée (mode mdot_ox_free)"
 '''
 def get_fuel_mdot(h2_percentage, fuel_compo, mode='mdot_fixed', unit='vol', phi=1.0):
     try:
@@ -106,6 +106,37 @@ def get_fuel_mdot(h2_percentage, fuel_compo, mode='mdot_fixed', unit='vol', phi=
         print("Unknown mode '"+ mode +"', please choose between ['mdot_fixed','mdot_free'] ")
 '''
 
+def compute_mdots(phi,config,reactor,valve,mfr_ox=0.2): #, egr_rate, mdot_out, mdot_o2_egr, y_co2_out, y_o2_ox
+    coef=1
+    mdot_fuel = 0.016
+    mdot_egr = get_egr_mdot(config.egr_rate, valve.mass_flow_rate, reactor.thermo['CO2'].Y, config.res.egr.thermo['CO2'].Y,config.res.egr_gas.density_mass,reactor.density,mfr_ox)
+    mdot_air = get_ox_mdot(phi, mdot_fuel, mdot_egr*config.res.egr.thermo['O2'].Y, config.res.ox.thermo['O2'].Y,config.res.ox_gas,config.res.fuel_gas)
+    #mdot_air, mdot_egr=get_ox_mdot(config.egr_rate,
+    #                               config.res.ox_gas,
+    #                               config.res.egr_gas,
+    #                               unit=config.egr_unit,
+    #                               phi=phi
+    #                              )
+    return mdot_fuel*coef, mdot_air*coef, mdot_egr*coef
+
+def get_ox_mdot(phi,mdot_fuel,mdot_o2_egr,y_o2_ox,ox_compo,fuel_compo):
+    mw_o2 = 32 #kg/mol
+    mw_fuel = 16 #kg/mol
+    mdot_o2_ox = ((mw_o2*2.0/mw_fuel)*mdot_fuel/phi)-mdot_o2_egr
+    mdot_ox = (mdot_o2_ox / y_o2_ox)
+    return mdot_ox
+
+def get_egr_mdot(egr_rate,mdot_out,y_co2_out,y_co2_egr,rho_in,rho_out,mdot_ox):
+    ##mdot_co2_out = mdot_out * y_co2_out
+    #vdot_co2_out = mdot_co2_out / rho_out
+    #mdot_co2_in = mdot_co2_out * egr_rate
+    ##mdot_co2_in = mdot_co2_out * egr_rate / (1+egr_rate)
+    #vdot_co2_in = vdot_co2_out * egr_rate
+    ##mdot_egr = mdot_co2_in / y_co2_egr
+    mdot_egr = mdot_ox * egr_rate / (1-egr_rate)
+    #print('mdot_egr: ',mdot_egr)
+    return mdot_egr
+
 class case:
     def __init__(self,fuel,ox,egr,Q,egr_rate,egr_unit,mode='mdot_fixed'):
         self.compo = self.Compo(fuel,ox,egr)
@@ -136,23 +167,10 @@ class case:
             def __init__(self):
                 self.contents = None
 
-
-def compute_mdots(config,phi):
-    coef=0.05
-    mdot_fuel = 0.016
-    mdot_air, mdot_egr=get_ox_mdot(config.egr_rate,
-                                   config.res.ox_gas,
-                                   config.res.egr_gas,
-                                   unit=config.egr_unit,
-                                   phi=phi
-                                  )
-    return mdot_fuel*coef, mdot_air*coef, mdot_egr*coef
-
 def create_reservoir(content, scheme, T, P):
     gas = ct.Solution(scheme)
     gas.TPX = T, P, content
-    stream = ct.Quantity(gas)
-    return gas,ct.Reservoir(gas)#,stream
+    return gas,ct.Reservoir(gas)
 
 def burned_gas(compo='O2:1., CH4:0.5',scheme='gri30.xml'):
     gas = ct.Solution(scheme)
@@ -164,7 +182,7 @@ def build_reactor(mixture):
     mix = ct.IdealGasReactor(mixture, energy='on') #energy eq. is on by default
     exhaust = ct.Reservoir(mixture)
     pressure_regulator = ct.Valve(mix, exhaust, K=10.0)
-    return mix
+    return mix,pressure_regulator
 
 def set_reservoirs_mdots(amont, mdots, aval):
     mfc=[]
@@ -174,33 +192,43 @@ def set_reservoirs_mdots(amont, mdots, aval):
         i+=1
     return mfc
 
-def compute_solutions(config,phi_range,print_report=False,real_egr=False):
+def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=10):
     data=np.zeros((len(phi_range),4))
     phi_bilger = np.zeros(len(phi_range))
     for phi in phi_range:
         gb = burned_gas()
-        reactor = build_reactor(gb)
-        mdots = compute_mdots(config,phi)
-        if real_egr:
-            mfcs = set_reservoirs_mdots([config.res.fuel, config.res.ox, reactor],mdots, reactor)## ajouter la detection du nombre de reservoir dans la config
-        else:
-            mfcs = set_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
+        reactor,output_valve = build_reactor(gb)
         sim=ct.ReactorNet([reactor])
-        sim.advance_to_steady_state()
-        '''
-        t=0.0
-        for n in range(nit):
-            tres = reactor.mass/sum(mfc.mass_flow_rate(t) for mfc in mfcs)
-            t += tres
-            sim.advance(t)
-            if print_mdot :
-                print(phi,reactor.T)
-        '''
-        phi_bilger[np.where(phi_range==phi)] = reactor.thermo.equivalence_ratio()
+        sim.initialize()
+
+        mdots = compute_mdots(phi, config, reactor, output_valve)
+        #if real_egr:
+        #    mfcs = set_reservoirs_mdots([config.res.fuel, config.res.ox, reactor],mdots, reactor)## ajouter la detection du nombre de reservoir dans la config
+        #else:
+        #    mfcs = set_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
+        print(('%10s %10s %10s %14s' % ('t [s]', 'fuel', 'air', 'egr')))
+        
+        for i in range(nit):
+            mfcs = set_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
+
+            sim.set_initial_time(0.0)
+            sim.advance_to_steady_state()
+            mdots = compute_mdots(phi, config, reactor, output_valve, mfcs[1].mass_flow_rate)
+
+            print(('%10.3e %10.3f %10.3f %10.3f' % (sim.time, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate)))
+            '''
+            t=0.0
+            for n in range(nit):
+                tres = reactor.mass/sum(mfc.mass_flow_rate(t) for mfc in mfcs)
+                t += tres
+                sim.advance(t)
+                if print_mdot :
+                    print(phi,reactor.T)
+            '''
+        #phi_bilger[np.where(phi_range==phi)] = reactor.thermo.equivalence_ratio()
         data[np.where(phi_range==phi), 0] = reactor.T
         data[np.where(phi_range==phi), 1] = reactor.thermo.heat_release_rate
         data[np.where(phi_range==phi), 2:] = reactor.thermo['O2', 'CO2'].Y
-    print(str(data[:, 0]))
     return phi_bilger,reactor, data
 
 def print_reactor(reactor):
