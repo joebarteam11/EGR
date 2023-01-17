@@ -105,12 +105,14 @@ def get_fuel_mdot(h2_percentage, fuel_compo, mode='mdot_fixed', unit='vol', phi=
     except:
         print("Unknown mode '"+ mode +"', please choose between ['mdot_fixed','mdot_free'] ")
 '''
+def scale_output_power(current_power, target_power):
+    return target_power/current_power
 
-def compute_mdots(phi,config,reactor,valve,mfr_ox=0.2): #, egr_rate, mdot_out, mdot_o2_egr, y_co2_out, y_o2_ox
-    coef=1
+def compute_mdots(phi,config,reactor,valve,mfr_ox=0.2,coef=1.0): #, egr_rate, mdot_out, mdot_o2_egr, y_co2_out, y_o2_ox
+    #coef=0.1
     mdot_fuel = 0.016
-    mdot_egr = get_egr_mdot(config.egr_rate, valve.mass_flow_rate, reactor.thermo['CO2'].Y, config.res.egr.thermo['CO2'].Y,config.res.egr_gas.density_mass,reactor.density,mfr_ox)
-    mdot_air = get_ox_mdot(phi, mdot_fuel, mdot_egr*config.res.egr.thermo['O2'].Y, config.res.ox.thermo['O2'].Y,config.res.ox_gas,config.res.fuel_gas)
+    mdot_egr = get_egr_mdot(config.egr_rate, mfr_ox)
+    mdot_air = get_ox_mdot(phi, mdot_fuel, mdot_egr*config.res.egr.thermo['O2'].Y, config.res.ox.thermo['O2'].Y)
     #mdot_air, mdot_egr=get_ox_mdot(config.egr_rate,
     #                               config.res.ox_gas,
     #                               config.res.egr_gas,
@@ -119,14 +121,14 @@ def compute_mdots(phi,config,reactor,valve,mfr_ox=0.2): #, egr_rate, mdot_out, m
     #                              )
     return mdot_fuel*coef, mdot_air*coef, mdot_egr*coef
 
-def get_ox_mdot(phi,mdot_fuel,mdot_o2_egr,y_o2_ox,ox_compo,fuel_compo):
+def get_ox_mdot(phi,mdot_fuel,mdot_o2_egr,y_o2_ox):
     mw_o2 = 32 #kg/mol
     mw_fuel = 16 #kg/mol
     mdot_o2_ox = ((mw_o2*2.0/mw_fuel)*mdot_fuel/phi)-mdot_o2_egr
     mdot_ox = (mdot_o2_ox / y_o2_ox)
     return mdot_ox
 
-def get_egr_mdot(egr_rate,mdot_out,y_co2_out,y_co2_egr,rho_in,rho_out,mdot_ox):
+def get_egr_mdot(egr_rate,mdot_ox):
     ##mdot_co2_out = mdot_out * y_co2_out
     #vdot_co2_out = mdot_co2_out / rho_out
     #mdot_co2_in = mdot_co2_out * egr_rate
@@ -141,7 +143,7 @@ class case:
     def __init__(self,fuel,ox,egr,Q,egr_rate,egr_unit,mode='mdot_fixed'):
         self.compo = self.Compo(fuel,ox,egr)
         self.res = self.Reservoirs()
-        self.Q = Q
+        self.pow = Q
         self.egr_rate = egr_rate
         self.egr_unit = egr_unit
         self.mode = mode
@@ -178,8 +180,8 @@ def burned_gas(compo='O2:1., CH4:0.5',scheme='gri30.xml'):
     gas.equilibrate("HP")
     return gas
 
-def build_reactor(mixture):
-    mix = ct.IdealGasReactor(mixture, energy='on') #energy eq. is on by default
+def build_reactor(mixture,volume):
+    mix = ct.IdealGasReactor(mixture, energy='on',volume=volume) #energy eq. is on by default
     exhaust = ct.Reservoir(mixture)
     pressure_regulator = ct.Valve(mix, exhaust, K=10.0)
     return mix,pressure_regulator
@@ -197,7 +199,7 @@ def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=10)
     phi_bilger = np.zeros(len(phi_range))
     for phi in phi_range:
         gb = burned_gas()
-        reactor,output_valve = build_reactor(gb)
+        reactor,output_valve = build_reactor(gb,volume=0.01)
         sim=ct.ReactorNet([reactor])
         sim.initialize()
 
@@ -213,9 +215,10 @@ def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=10)
 
             sim.set_initial_time(0.0)
             sim.advance_to_steady_state()
-            mdots = compute_mdots(phi, config, reactor, output_valve, mfcs[1].mass_flow_rate)
-
-            print(('%10.3e %10.3f %10.3f %10.3f' % (sim.time, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate)))
+            power_regulator = scale_output_power(reactor.thermo.heat_release_rate*reactor.volume, config.pow)
+            mdots = compute_mdots(phi, config, reactor, output_valve, mfcs[1].mass_flow_rate,power_regulator)
+            print(power_regulator)
+            #print(('%10.3e %10.3f %10.3f %10.3f' % (sim.time, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate)))
             '''
             t=0.0
             for n in range(nit):
