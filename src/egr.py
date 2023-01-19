@@ -145,7 +145,7 @@ def edit_reservoirs_mdots(reactor,mdots):
         i+=1
     return i
 
-def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=2):
+def compute_solutions(config,phi_range,power_restriction=False,nit=2):
     data=np.zeros((len(phi_range),4))
     phi_bilger = np.zeros(len(phi_range))
 
@@ -167,20 +167,20 @@ def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=2):
             mdots = compute_mdots(phi, config, reactor, output_valve)
             edit_reservoirs_mdots(reactor, mdots)
             print(('%3i %10.3e %10.3e %10.3e %10.3f %10.3f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate, reactor.T)))
-        
-        #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 100
-        i=0
-        currentpower = reactor.thermo.heat_release_rate*reactor.volume
-        while (abs(currentpower - config.pow) > 10 and i<100):
-            power_regulator = config.pow/currentpower
-            mdots = [mdot*power_regulator for mdot in mdots]
-            edit_reservoirs_mdots(reactor, mdots)
-            sim.reinitialize()
-            sim.advance_to_steady_state()
+        if(power_restriction):
+            #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 100
+            i=0
             currentpower = reactor.thermo.heat_release_rate*reactor.volume
-            i+=1
-            print(('%10.3e %10.3e %10.3e %10.4f %10.4f' % (mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
-        
+            while (abs(currentpower - config.pow) > 10 and i<100):
+                power_regulator = config.pow/currentpower
+                mdots = [mdot*power_regulator for mdot in mdots]
+                edit_reservoirs_mdots(reactor, mdots)
+                sim.reinitialize()
+                sim.advance_to_steady_state()
+                currentpower = reactor.thermo.heat_release_rate*reactor.volume
+                i+=1
+                print(('%10.3e %10.3e %10.3e %10.4f %10.4f' % (mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
+            
         data[np.where(phi_range==phi), 0] = reactor.T
         data[np.where(phi_range==phi), 1] = reactor.thermo.heat_release_rate
         data[np.where(phi_range==phi), 2:] = reactor.thermo['O2', 'CO2'].Y
