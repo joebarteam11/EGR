@@ -159,14 +159,14 @@ def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=2):
         sim.initialize()
 
         #compute steady state
-        print(('%10s %10s %10s %10s %10s' % ('fuel', 'air', 'egr', 'HRR', 'T'))) 
+        #print(('%10s %10s %10s %10s %10s' % ('fuel', 'air', 'egr', 'HRR', 'T'))) 
         for i in range(nit):
 
             sim.reinitialize()
             sim.advance_to_steady_state()
             mdots = compute_mdots(phi, config, reactor, output_valve)
             edit_reservoirs_mdots(reactor, mdots)
-            print(('%3i %10.3e %10.3e %10.3e %10.3f %10.3f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate, reactor.T)))
+            #print(('%3i %10.3e %10.3e %10.3e %10.3f %10.3f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate, reactor.T)))
         
         #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 100
         i=0
@@ -179,7 +179,7 @@ def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=2):
             sim.advance_to_steady_state()
             currentpower = reactor.thermo.heat_release_rate*reactor.volume
             i+=1
-            print(('%10.3e %10.3e %10.3e %10.4f %10.4f' % (mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
+            #print(('%10.3e %10.3e %10.3e %10.4f %10.4f' % (mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
         
         data[np.where(phi_range==phi), 0] = reactor.T
         data[np.where(phi_range==phi), 1] = reactor.thermo.heat_release_rate
