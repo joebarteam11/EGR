@@ -3,9 +3,9 @@ import numpy as np
 import cantera as ct
 import matplotlib.pyplot as plt
 from matplotlib import *
-import colorama
+#import colorama
 
-colorama.init()
+#colorama.init()
 
 def get_ox_mdot_v1(egr_percentage, ox_compo, egr_compo, mode='mdot_fixed', unit='vol', phi=1.0):
     try:
@@ -48,7 +48,7 @@ def get_ox_mdot_v1(egr_percentage, ox_compo, egr_compo, mode='mdot_fixed', unit=
             print("Unknown unit '"+ unit +"', please choose between ['mol','mass','vol']")
 
     except:
-        print(colorama.Fore.RED + 'The oxidizer provided does not contain pure O2 !')
+        print('The oxidizer provided does not contain pure O2 !')
     
 get_ox_mdot_v1.__doc__="Calcule un débit massique a imposer en focntion du pourcentage de egr qu'on souhaite ajouter Ce pourcentage peut etre défini comme un pourcentage de 'remplacement' d'air : on va réduired'autant le débit d'air pour conserver un débit massique total constant défini par le débit d'air sans egr à la richesse souhaitée (mode mdot_ox_fixed) Il peut aussi être considéré comme un pourcentage de egr supplémentaire, défini comme un ajout de X% du débit d'air à la richesse considérée (mode mdot_ox_free)"
 
@@ -128,6 +128,7 @@ def build_reactor(mixture,volume):
     mix = ct.IdealGasReactor(mixture, energy='on',volume=volume) #energy eq. is on by default
     exhaust = ct.Reservoir(mixture)
     pressure_regulator = ct.Valve(mix, exhaust, K=10.0)
+    sim=ct.ReactorNet([mix])
     return mix,pressure_regulator
 
 def init_reservoirs_mdots(amont, mdots, aval):
@@ -143,21 +144,22 @@ def edit_reservoirs_mdots(reactor,mdots):
     for inlet in reactor.inlets:
         inlet.mass_flow_rate = mdots[i]
         i+=1
-    return i
+    return None
 
-def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=2):
+def compute_solutions(config,phi_range,power_regulator=False,nit=5):
     data=np.zeros((len(phi_range),4))
     phi_bilger = np.zeros(len(phi_range))
 
     for phi in phi_range:
         gb = burned_gas()
         reactor,output_valve = build_reactor(gb,volume=1.0)
-
+        #sim = build_reactor(gb,volume=1.0)
         sim=ct.ReactorNet([reactor])
         mdots = compute_mdots(phi, config, reactor, output_valve)
         mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
         sim.initialize()
-
+    
+        #print('Reactor mfs: ',reactor.thermo['CH4','O2','CO2'].Y)
         #compute steady state
         #print(('%10s %10s %10s %10s %10s' % ('fuel', 'air', 'egr', 'HRR', 'T'))) 
         for i in range(nit):
@@ -167,24 +169,26 @@ def compute_solutions(config,phi_range,print_report=False,real_egr=False,nit=2):
             mdots = compute_mdots(phi, config, reactor, output_valve)
             edit_reservoirs_mdots(reactor, mdots)
             #print(('%3i %10.3e %10.3e %10.3e %10.3f %10.3f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate, reactor.T)))
-        
+        mdot_tot = sum(mfcs[i].mass_flow_rate for i in range(len(mfcs)))
+        #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, mfcs[2].mass_flow_rate/mdot_tot, reactor.thermo.heat_release_rate, reactor.T)))
         #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 100
-        i=0
-        currentpower = reactor.thermo.heat_release_rate*reactor.volume
-        while (abs(currentpower - config.pow) > 10 and i<100):
-            power_regulator = config.pow/currentpower
-            mdots = [mdot*power_regulator for mdot in mdots]
-            edit_reservoirs_mdots(reactor, mdots)
-            sim.reinitialize()
-            sim.advance_to_steady_state()
+        if(power_regulator):
+            i=0
             currentpower = reactor.thermo.heat_release_rate*reactor.volume
-            i+=1
-            #print(('%10.3e %10.3e %10.3e %10.4f %10.4f' % (mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
-        
+            while (abs(currentpower - config.pow) > 5 and i<100):
+                power_regulator = config.pow/currentpower
+                mdots = [mdot*power_regulator for mdot in mdots]
+                edit_reservoirs_mdots(reactor, mdots)
+                sim.reinitialize()
+                sim.advance_to_steady_state()
+                currentpower = reactor.thermo.heat_release_rate*reactor.volume
+                i+=1
+                #print(('%10.3e %10.3e %10.3e %10.4f %10.4f' % (mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
+            
         data[np.where(phi_range==phi), 0] = reactor.T
         data[np.where(phi_range==phi), 1] = reactor.thermo.heat_release_rate
         data[np.where(phi_range==phi), 2:] = reactor.thermo['O2', 'CO2'].Y
-    return phi_bilger,reactor, data
+    return reactor,data
 
 def print_reactor(reactor):
     print(reactor.thermo.report())
