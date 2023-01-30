@@ -6,24 +6,6 @@ from egr_multiproc import *
 
 fig, ax = plt.subplots(1,1)
 
-def main():
-    # start the process pool
-    with ProcessPoolExecutor(max_workers=4)as executor:
-        # submit many tasks
-
-        egr_range = np.arange(0.0,0.21,0.1)
-        futures = [executor.submit(task,phi_range,egr) for egr in egr_range]
-        print('Waiting for tasks to complete...')
-        # update each time a task finishes
-        for _ in as_completed(futures):
-            # report the number of remaining tasks
-            print(f'About {len(executor._pending_work_items)} tasks remain')
-    print('Done')
-
-    df = pd.DataFrame([{'EGR':item[0], 'phi':item[1], 'T':item[2]} for future in futures for item in future.result()])
-    df=df.pivot_table(columns='EGR',index='phi',values='T')
-    print(df)
-    return df
 
 if __name__ == '__main__':
     # get the start time
@@ -31,7 +13,7 @@ if __name__ == '__main__':
 
     config = case('CH4:1.',                   #fuel compo
                 'O2:1. N2:3.76',  #N2:3.76            #ox compo
-                'CO2:1.0',                    #egr compo
+                'CO2:0.5 H2O:1.0 O2:0.2',                    #egr compo
                 3960.0,                       #thermal output power NOT IMPLEMENTED YET
                 0.0001,                       #egr rate
                 'vol'                         #egr rate unit
@@ -43,12 +25,12 @@ if __name__ == '__main__':
     config.res.egr_gas, config.res.egr = create_reservoir(config.compo.egr,'gri30.xml', 300.0, 100000)
 
     #range of computation
-    egr_percentages = np.arange(0.0,0.21,0.1)
+    egr_percentages = np.arange(0.0,0.11,0.05)
     for egr_rate in egr_percentages:
         config.egr_rate = egr_rate #override config.egr_rate set during object instanciation
         phi_range = np.arange(0.6,2.1,0.05)
         reactor,results = compute_solutions(config,phi_range,power_regulation=False)
-        plt.plot(phi_range,results[:,0],label='EGR reacteurs:'+str(round(config.egr_rate*100,1)),marker='x')
+        plt.plot(phi_range,results[:,1],label='EGR reacteurs:'+str(round(config.egr_rate*100,1)),marker='x')
         #subplot_data(phi_range,results,'Phi',['T[K]','HRR[W/m3]','Y_O2','Y_CO2'],'EGR rate (%):'+str(round(config.egr_rate*100,1))+'%')
         #print_reactor(reactor)
     '''

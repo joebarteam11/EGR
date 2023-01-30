@@ -12,7 +12,7 @@ import time
 
 fuel = {'CH4': 1.0}         # Methane composition
 oxidizer = {'O2': 1.0, 'N2':3.76} #, 'N2':3.76
-egr = {'CO2':1.0}               # EGR composition
+egr = {'CO2':0.5, 'H2O':1.0, 'O2':0.2}               # EGR composition
 
 phi_range = np.arange(0.6,2.1,0.05)
 
@@ -35,8 +35,7 @@ def main():
     # start the process pool
     with ProcessPoolExecutor(max_workers=4)as executor:
         # submit many tasks
-
-        egr_range = np.arange(0.0,0.21,0.1)
+        egr_range = np.arange(0.0,0.11,0.05)
         futures = [executor.submit(task,phi_range,egr) for egr in egr_range]
         print('Waiting for tasks to complete...')
         # update each time a task finishes
@@ -57,7 +56,7 @@ def plot(df,fig,ax):
     plt.show()
 
 
-if __name__ == '__main__':
+"""if __name__ == '__main__':
     #get start time
     st=time.time()
 
@@ -71,4 +70,4 @@ if __name__ == '__main__':
     elapsed_time = et - st
     print('Execution time:', elapsed_time, 'seconds')
     plot(data,fig,ax)
-
+"""

@@ -49,7 +49,7 @@ def get_ox_mdot_v1(egr_percentage, ox_compo, egr_compo, mode='mdot_fixed', unit=
     
 get_ox_mdot_v1.__doc__="Calcule un débit massique a imposer en focntion du pourcentage de egr qu'on souhaite ajouter Ce pourcentage peut etre défini comme un pourcentage de 'remplacement' d'air : on va réduired'autant le débit d'air pour conserver un débit massique total constant défini par le débit d'air sans egr à la richesse souhaitée (mode mdot_ox_fixed) Il peut aussi être considéré comme un pourcentage de egr supplémentaire, défini comme un ajout de X% du débit d'air à la richesse considérée (mode mdot_ox_free)"
 
-def compute_mdots(phi,config,reactor,valve,mfr_ox=0.2,coeff=1.0): #, egr_rate, mdot_out, mdot_o2_egr, y_co2_out, y_o2_ox
+def compute_mdots(phi,config,reactor,coeff=1.0): #, egr_rate, mdot_out, mdot_o2_egr, y_co2_out, y_o2_ox
     coef=coeff*10
 
     """mdot_fuel = 0.016
@@ -67,22 +67,23 @@ def compute_mdots(phi,config,reactor,valve,mfr_ox=0.2,coeff=1.0): #, egr_rate, m
     mw_fuel = config.res.fuel_gas.mean_molecular_weight/1000 #kg/mol
     mw_oxidizer = config.res.ox_gas.mean_molecular_weight/1000 #kg/mol
     mw_egr = config.res.egr_gas.mean_molecular_weight/1000 #kg/mol
-    Sy=17.16
+
     Sx=2.0
-    moldot_tot = 1.0
-    moldot_egr = config.egr_rate
-    #moldot_fuel = (1-moldot_egr)*(phi/Sx)/((phi/Sx)+1.0)
-    #moldot_air = (moldot_tot-moldot_egr-moldot_fuel)
-    moldot_o2 = (Sx*(1-moldot_egr)/(phi))/(1+4.76*Sx/(phi))
-    
-    #moldot_fuel = moldot_air*config.res.ox_gas['O2'].X*phi/Sx
-    moldot_air = 4.76*moldot_o2#/config.res.ox_gas['O2'].X
-    moldot_fuel = 1-moldot_air-moldot_egr
-    #moldot_fuel = (4.76*phi/Sx)*moldot_air*config.res.ox_gas['O2'].X
-    mdot_tot = moldot_fuel*mw_fuel + moldot_air*mw_oxidizer + moldot_egr*mw_egr
-    #print(config.res.ox_gas['O2'].X,config.res.ox_gas['N2'].X)
-    print(('%10.4f %10.4f %10.4f %10.4f')%(moldot_fuel,moldot_o2,moldot_air,moldot_egr))
-    return [moldot_fuel*coef*mw_fuel, moldot_air*coef*mw_oxidizer, moldot_egr*coef*mw_egr], mdot_tot
+    n_mole_ox = 4.76
+    X_egr = config.egr_rate
+    X_o2_egr = config.res.egr.thermo['O2'].X*X_egr
+    X_egr_no_o2 = (1-config.res.egr.thermo['O2'].X)*X_egr
+    #print(X_o2_egr)
+    X_o2_air = (Sx*(1-X_egr_no_o2)/(phi)-X_o2_egr*(1+Sx/phi))/(1+n_mole_ox*Sx/(phi)) 
+    #print(X_o2)
+    X_air = n_mole_ox*X_o2_air
+    X_fuel = 1-X_air-X_egr
+    phi_cor = Sx*X_fuel/(X_o2_air+X_o2_egr)
+    print(phi,phi_cor)
+    mdot_tot = X_fuel*coef*mw_fuel + X_air*coef*mw_oxidizer + X_egr*coef*mw_egr
+    #print(config.res.egr.thermo['O2'].X,config.res.ox_gas['N2'].X)
+    #print(('%10.4f %10.4f %10.4f %10.4f')%(moldot_fuel,moldot_o2,moldot_air,moldot_egr))
+    return [X_fuel*coef*mw_fuel, X_air*coef*mw_oxidizer, X_egr*coef*mw_egr], mdot_tot#, phi_cor
 
 def get_ox_mdot(phi,mdot_fuel,mdot_o2_egr,y_o2_ox):
     mw_o2 = 32 #kg/mol
@@ -143,7 +144,7 @@ def create_reservoir(content, scheme, T, P):
 def burned_gas(phi,compo='O2:1.,N2:3.76, CH4:0.5',scheme='gri30.xml'):
     gas = ct.Solution(scheme)
     gas.TPX = 300.0,1*100000,compo
-    gas.set_equivalence_ratio(1, 'CH4', 'O2:1.0, N2:3.76')
+    gas.set_equivalence_ratio(phi, 'CH4', 'O2:1.0, N2:3.76')
     gas.equilibrate("HP")
     return gas
 
@@ -166,48 +167,32 @@ def edit_reservoirs_mdots(reactor,mdots):
     for inlet in reactor.inlets:
         inlet.mass_flow_rate = mdots[i]
         i+=1
-    return None
-
-def compute_solutions(config,phi_range,power_regulator=False,nit=5):
-    data=np.zeros((len(phi_range),4))
-    phi_bilger = np.zeros(len(phi_range))
 
 def compute_solutions(config,phi_range,power_regulation=False,nit=1):
-    data=np.zeros((len(phi_range),4))
-    #phi_bilger = np.zeros(len(phi_range))
+    data=np.zeros((len(phi_range),5))
+    print(('%10s %10s %10s %10s %10s %10s' % ('mdot fuel', 'mdot air', 'mdot egr', 'HRR', 'T', 'P'))) 
     for phi in phi_range:
+        #create the reactor and fill it with burned gas to ignite the mixture
         gb = burned_gas(phi)
         reactor,pressure_reg = build_reactor(gb,volume=100000.0)
-        
+        #create the reactor network
         sim=ct.ReactorNet([reactor])
         sim.initialize()
-        mdots,mdot_tot = compute_mdots(phi, config, reactor, 'output_valve')
+        #set the mass flow controllers according to phi and egr rate asked in the config
+        mdots,mdot_tot = compute_mdots(phi, config, reactor)
         mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
-        #mfc_tot=0
-        #outlet_mfc = ct.PressureController(reactor, exhaust, master=mfcs[1], K=0.01)
         #compute steady state
-        #print(('%10s %10s %10s %10s %10s %10s' % ('fuel', 'air', 'egr', 'HRR', 'T', 'P'))) 
-        for i in range(nit):
-            sim.reinitialize()
-            time=3e-1
-            #fig,ax1=plt.subplots(1,1)
-            """for i in range (40):
-                time +=1e-1
-                sim.advance(time)
-                ax1.plot(time,reactor.T,'o')"""
-            sim.advance_to_steady_state()
-            mdots, mdot_tot = compute_mdots(phi, config, reactor, pressure_reg)
-            edit_reservoirs_mdots(reactor, mdots)
-            #mfc_tot = sum(mfc.mass_flow_rate for mfc in mfcs)
-            #print (mfc_tot, mdot_tot)
-            #print(reactor.mean_molecular_weight/1000)
-            moldot_tot = 10000.0
-            #moldot_tot = mfcs[0].mass_flow_rate/(config.res.fuel_gas.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.res.ox_gas.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.res.egr_gas.mean_molecular_weight/1000)
-            #print(('%3i %10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (i, mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, (mfcs[2].mass_flow_rate/mdot_tot), reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
-            print(('%3i %10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (i, (mfcs[0].mass_flow_rate/(config.res.fuel_gas.mean_molecular_weight/1000)/moldot_tot), 
-                                                                        (mfcs[1].mass_flow_rate/(config.res.ox_gas.mean_molecular_weight/1000))/moldot_tot, 
-                                                                        (mfcs[2].mass_flow_rate/(config.res.egr_gas.mean_molecular_weight/1000))/moldot_tot, 
-                                                                        reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
+        sim.advance_to_steady_state()
+        #mdots, mdot_tot = compute_mdots(phi, config, reactor)
+        #edit_reservoirs_mdots(reactor, mdots)
+
+        moldot_tot = mfcs[0].mass_flow_rate/(config.res.fuel_gas.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.res.ox_gas.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.res.egr_gas.mean_molecular_weight/1000)
+        #print(('%10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, (mfcs[2].mass_flow_rate/mdot_tot), reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
+        print((' %10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % ((mfcs[0].mass_flow_rate/(config.res.fuel_gas.mean_molecular_weight/1000))/moldot_tot, 
+                                                                  (mfcs[1].mass_flow_rate/(config.res.ox_gas.mean_molecular_weight/1000))/moldot_tot, 
+                                                                  (mfcs[2].mass_flow_rate/(config.res.egr_gas.mean_molecular_weight/1000))/moldot_tot, 
+                                                                  reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
+
         #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 100
         if(power_regulation):
             i=0
@@ -221,10 +206,10 @@ def compute_solutions(config,phi_range,power_regulation=False,nit=1):
                 currentpower = reactor.thermo.heat_release_rate*reactor.volume
                 i+=1
                 print(('%10.3e %10.3e %10.3e %10.4f %10.4f' % (mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
-            
-        data[np.where(phi_range==phi), 0] = reactor.T
-        data[np.where(phi_range==phi), 1] = reactor.thermo.heat_release_rate
-        data[np.where(phi_range==phi), 2:] = reactor.thermo['CH4', 'CO2'].Y
+        #data[np.where(phi_range==phi), 0] = phi_cor
+        data[np.where(phi_range==phi), 1] = reactor.T
+        data[np.where(phi_range==phi), 2] = reactor.thermo.heat_release_rate
+        data[np.where(phi_range==phi), 3:] = reactor.thermo['CH4', 'CO2'].Y
     return reactor, data
 
 def print_reactor(reactor):
