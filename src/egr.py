@@ -3,6 +3,7 @@ import numpy as np
 import cantera as ct
 import matplotlib.pyplot as plt
 from matplotlib import *
+import pandas as pd
 
 def get_ox_mdot_v1(egr_percentage, ox_compo, egr_compo, mode='mdot_fixed', unit='vol', phi=1.0):
     try:
@@ -64,22 +65,20 @@ def compute_mdots(phi,config,reactor,coeff=1.0): #, egr_rate, mdot_out, mdot_o2_
     mdot_egr = config.egr_rate*(mdot_air+mdot_fuel)
     mdot_final = mdot_fuel*coef + mdot_air*coef + mdot_egr*coef
     """
-    mw_fuel = config.res.fuel_gas.mean_molecular_weight/1000 #kg/mol
-    mw_oxidizer = config.res.ox_gas.mean_molecular_weight/1000 #kg/mol
-    mw_egr = config.res.egr_gas.mean_molecular_weight/1000 #kg/mol
+    mw_fuel = config.res.fuel.thermo.mean_molecular_weight/1000 #kg/mol
+    mw_oxidizer = config.res.ox.thermo.mean_molecular_weight/1000 #kg/mol
+    mw_egr = config.res.egr.thermo.mean_molecular_weight/1000 #kg/mol
 
     Sx=2.0
     n_mole_ox = 4.76
     X_egr = config.egr_rate
     X_o2_egr = config.res.egr.thermo['O2'].X*X_egr
     X_egr_no_o2 = (1-config.res.egr.thermo['O2'].X)*X_egr
-    #print(X_o2_egr)
     X_o2_air = (Sx*(1-X_egr_no_o2)/(phi)-X_o2_egr*(1+Sx/phi))/(1+n_mole_ox*Sx/(phi)) 
-    #print(X_o2)
     X_air = n_mole_ox*X_o2_air
     X_fuel = 1-X_air-X_egr
-    phi_cor = Sx*X_fuel/(X_o2_air+X_o2_egr)
-    print(phi,phi_cor)
+    #phi_cor = Sx*X_fuel/(X_o2_air+X_o2_egr)
+    #print(phi,phi_cor)
     mdot_tot = X_fuel*coef*mw_fuel + X_air*coef*mw_oxidizer + X_egr*coef*mw_egr
     #print(config.res.egr.thermo['O2'].X,config.res.ox_gas['N2'].X)
     #print(('%10.4f %10.4f %10.4f %10.4f')%(moldot_fuel,moldot_o2,moldot_air,moldot_egr))
@@ -114,8 +113,6 @@ class case:
         self.egr_rate = egr_rate
         self.egr_unit = egr_unit
         self.mode = mode
-    #def __setattr__(self, res_fuel, res_ox, res_egr):
-    #    self.res = self.Reservoirs(res_fuel, res_ox, res_egr)
 
     class Compo:
         def __init__(self,fuel,ox,egr):
@@ -128,18 +125,11 @@ class case:
             self.fuel = None
             self.ox = None
             self.egr = None
-            self.fuel_gas = self.Contents()
-            self.ox_gas = self.Contents()
-            self.egr_gas = self.Contents()
-
-        class Contents:
-            def __init__(self):
-                self.contents = None
 
 def create_reservoir(content, scheme, T, P):
     gas = ct.Solution(scheme)
     gas.TPX = T, P, content
-    return gas,ct.Reservoir(gas)
+    return ct.Reservoir(gas)
 
 def burned_gas(phi,compo='O2:1.,N2:3.76, CH4:0.5',scheme='gri30.xml'):
     gas = ct.Solution(scheme)
@@ -168,9 +158,13 @@ def edit_reservoirs_mdots(reactor,mdots):
         inlet.mass_flow_rate = mdots[i]
         i+=1
 
-def compute_solutions(config,phi_range,power_regulation=False,nit=1):
-    data=np.zeros((len(phi_range),5))
-    print(('%10s %10s %10s %10s %10s %10s' % ('mdot fuel', 'mdot air', 'mdot egr', 'HRR', 'T', 'P'))) 
+def compute_solutions(config,phi_range,power_regulation=False,species = ['CH4','H2','O2','CO2','H2O']):
+    data=np.zeros((len(phi_range),8))
+    #create a dataframe naming colums with 'phi', 'T' and all the species in the list
+    #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
+    df =  pd.DataFrame(columns=['EGR','phi','T']+species)
+
+    print(('%10s %10s %10s %10s %10s %10s %10s' % ('phi','fuel', 'air', 'egr', 'HRR', 'T', 'P'))) 
     for phi in phi_range:
         #create the reactor and fill it with burned gas to ignite the mixture
         gb = burned_gas(phi)
@@ -186,34 +180,41 @@ def compute_solutions(config,phi_range,power_regulation=False,nit=1):
         #mdots, mdot_tot = compute_mdots(phi, config, reactor)
         #edit_reservoirs_mdots(reactor, mdots)
 
-        moldot_tot = mfcs[0].mass_flow_rate/(config.res.fuel_gas.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.res.ox_gas.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.res.egr_gas.mean_molecular_weight/1000)
+        moldot_tot = mfcs[0].mass_flow_rate/(config.res.fuel.thermo.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.res.ox.thermo.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.res.egr.thermo.mean_molecular_weight/1000)
         #print(('%10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, (mfcs[2].mass_flow_rate/mdot_tot), reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
-        print((' %10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % ((mfcs[0].mass_flow_rate/(config.res.fuel_gas.mean_molecular_weight/1000))/moldot_tot, 
-                                                                  (mfcs[1].mass_flow_rate/(config.res.ox_gas.mean_molecular_weight/1000))/moldot_tot, 
-                                                                  (mfcs[2].mass_flow_rate/(config.res.egr_gas.mean_molecular_weight/1000))/moldot_tot, 
+        print((' %10.3f %10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (phi, (mfcs[0].mass_flow_rate/(config.res.fuel.thermo.mean_molecular_weight/1000))/moldot_tot, 
+                                                                  (mfcs[1].mass_flow_rate/(config.res.ox.thermo.mean_molecular_weight/1000))/moldot_tot, 
+                                                                  (mfcs[2].mass_flow_rate/(config.res.egr.thermo.mean_molecular_weight/1000))/moldot_tot, 
                                                                   reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
 
-        #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 100
+        #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 10
         if(power_regulation):
             i=0
             currentpower = reactor.thermo.heat_release_rate*reactor.volume
-            while (abs(currentpower - config.pow) > 10 and i<100):
+            while (abs(currentpower - config.pow) > 10 and i<10):
                 power_regulator = config.pow/currentpower
                 mdots = [mdot*power_regulator for mdot in mdots]
+                #print(mdots)
                 edit_reservoirs_mdots(reactor, mdots)
                 sim.reinitialize()
-                sim.advance_to_steady_state()
+                try:
+                    sim.advance_to_steady_state()
+                except:
+                    print('unknown error trying to reach steady state (power regulation)')
+                    break
                 currentpower = reactor.thermo.heat_release_rate*reactor.volume
                 i+=1
-                print(('%10.3e %10.3e %10.3e %10.4f %10.4f' % (mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
-        #data[np.where(phi_range==phi), 0] = phi_cor
+                print(('%2i %10.3f %10.3f %10.3f %10.4f %10.4f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
+        
+        df = pd.concat([df, pd.DataFrame([[config.egr_rate, phi, reactor.T]+list(reactor.thermo[species].X)], columns=['EGR','phi','T']+species)]).astype(float)
+        data[np.where(phi_range==phi), 0] = phi
         data[np.where(phi_range==phi), 1] = reactor.T
         data[np.where(phi_range==phi), 2] = reactor.thermo.heat_release_rate
-        data[np.where(phi_range==phi), 3:] = reactor.thermo['CH4', 'CO2'].Y
-    return reactor, data
+        data[np.where(phi_range==phi), 3:] = reactor.thermo['CH4','H2','O2','CO2','H2O'].X
+    return reactor, data, df
 
-def print_reactor(reactor):
-    print(reactor.thermo.report())
+def print_reactor(df):
+    print(df)
 
 def subplot_data(x,y,xlabel,ylabel,legend=None,symbol='-x'):
     rcParams['figure.figsize'] = (14, 12)
@@ -224,8 +225,8 @@ def subplot_data(x,y,xlabel,ylabel,legend=None,symbol='-x'):
         plt.xlabel(xlabel)
         plt.ylabel(ylabel[i])
         plt.grid()
-        #if legend != None:
-            #plt.legend()
+        if legend != None:
+            plt.legend()
 
 def see_graphs(suptitle=''):
     plt.suptitle(suptitle)
