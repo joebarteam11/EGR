@@ -131,11 +131,12 @@ def create_reservoir(content, scheme, T, P):
     gas.TPX = T, P, content
     return ct.Reservoir(gas)
 
-def burned_gas(phi,compo='O2:1.,N2:3.76, CH4:0.5',scheme='gri30.xml'):
+def burned_gas(phi,compo='O2:1.,N2:3.76, CH4:0.5',scheme='gri30.xml',ignition=True):
     gas = ct.Solution(scheme)
-    gas.TPX = 300.0,1*100000,compo
+    gas.TPX = 400.0,1*100000,compo
     gas.set_equivalence_ratio(phi, 'CH4', 'O2:1.0, N2:3.76')
-    gas.equilibrate("HP")
+    if(ignition):
+        gas.equilibrate("HP")
     return gas
 
 def build_reactor(mixture,volume):
@@ -157,6 +158,54 @@ def edit_reservoirs_mdots(reactor,mdots):
     for inlet in reactor.inlets:
         inlet.mass_flow_rate = mdots[i]
         i+=1
+def mixer(phi,config):
+    gb = burned_gas(phi,ignition=False)
+    reactor,pressure_reg = build_reactor(gb,volume=100000.0)
+    #create the reactor network
+    
+    sim=ct.ReactorNet([reactor])
+    sim.initialize()
+    #set the mass flow controllers according to phi and egr rate asked in the config
+    mdots,mdot_tot = compute_mdots(phi, config, reactor)
+    mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
+    #compute steady state
+    sim.advance_to_steady_state()
+    return reactor.T, reactor.thermo.P, reactor.thermo.X
+
+def reactor_0D(phi,config,power_regulation):
+    #create the reactor and fill it with burned gas to ignite the mixture
+    gb = burned_gas(phi,ignition=True)
+    reactor,pressure_reg = build_reactor(gb,volume=100000.0)
+    #create the reactor network
+    sim=ct.ReactorNet([reactor])
+    sim.initialize()
+    #set the mass flow controllers according to phi and egr rate asked in the config
+    mdots,mdot_tot = compute_mdots(phi, config, reactor)
+    mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
+    #compute steady state
+    sim.advance_to_steady_state()
+
+    #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 10
+    if(power_regulation):
+        i=0
+        currentpower = hrr*reactor.volume
+        while (abs(currentpower - config.pow) > 10 and i<10):
+            power_regulator = config.pow/currentpower
+            mdots = [mdot*power_regulator for mdot in mdots]
+            #print(mdots)
+            edit_reservoirs_mdots(reactor, mdots)
+            sim.reinitialize()
+            try:
+                sim.advance_to_steady_state()
+            except:
+                print('unknown error trying to reach steady state (power regulation)')
+                break
+            currentpower = reactor.thermo.heat_release_rate*reactor.volume
+            i+=1
+            print(('%2i %10.3f %10.3f %10.3f %10.4f %10.4f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
+    
+
+    return mfcs, reactor
 
 def compute_solutions(config,phi_range,power_regulation=False,species = ['CH4','H2','O2','CO2','H2O']):
     data=np.zeros((len(phi_range),8))
@@ -166,20 +215,8 @@ def compute_solutions(config,phi_range,power_regulation=False,species = ['CH4','
 
     print(('%10s %10s %10s %10s %10s %10s %10s' % ('phi','fuel', 'air', 'egr', 'HRR', 'T', 'P'))) 
     for phi in phi_range:
-        #create the reactor and fill it with burned gas to ignite the mixture
-        gb = burned_gas(phi)
-        reactor,pressure_reg = build_reactor(gb,volume=100000.0)
-        #create the reactor network
-        sim=ct.ReactorNet([reactor])
-        sim.initialize()
-        #set the mass flow controllers according to phi and egr rate asked in the config
-        mdots,mdot_tot = compute_mdots(phi, config, reactor)
-        mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
-        #compute steady state
-        sim.advance_to_steady_state()
-        #mdots, mdot_tot = compute_mdots(phi, config, reactor)
-        #edit_reservoirs_mdots(reactor, mdots)
-
+ 
+        mfcs, reactor = reactor_0D(phi,config,power_regulation)
         moldot_tot = mfcs[0].mass_flow_rate/(config.res.fuel.thermo.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.res.ox.thermo.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.res.egr.thermo.mean_molecular_weight/1000)
         #print(('%10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, (mfcs[2].mass_flow_rate/mdot_tot), reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
         print((' %10.3f %10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (phi, (mfcs[0].mass_flow_rate/(config.res.fuel.thermo.mean_molecular_weight/1000))/moldot_tot, 
@@ -187,30 +224,12 @@ def compute_solutions(config,phi_range,power_regulation=False,species = ['CH4','
                                                                   (mfcs[2].mass_flow_rate/(config.res.egr.thermo.mean_molecular_weight/1000))/moldot_tot, 
                                                                   reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
 
-        #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 10
-        if(power_regulation):
-            i=0
-            currentpower = reactor.thermo.heat_release_rate*reactor.volume
-            while (abs(currentpower - config.pow) > 10 and i<10):
-                power_regulator = config.pow/currentpower
-                mdots = [mdot*power_regulator for mdot in mdots]
-                #print(mdots)
-                edit_reservoirs_mdots(reactor, mdots)
-                sim.reinitialize()
-                try:
-                    sim.advance_to_steady_state()
-                except:
-                    print('unknown error trying to reach steady state (power regulation)')
-                    break
-                currentpower = reactor.thermo.heat_release_rate*reactor.volume
-                i+=1
-                print(('%2i %10.3f %10.3f %10.3f %10.4f %10.4f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
-        
         df = pd.concat([df, pd.DataFrame([[config.egr_rate, phi, reactor.T]+list(reactor.thermo[species].X)], columns=['EGR','phi','T']+species)]).astype(float)
         data[np.where(phi_range==phi), 0] = phi
         data[np.where(phi_range==phi), 1] = reactor.T
         data[np.where(phi_range==phi), 2] = reactor.thermo.heat_release_rate
         data[np.where(phi_range==phi), 3:] = reactor.thermo['CH4','H2','O2','CO2','H2O'].X
+    
     return reactor, data, df
 
 def print_reactor(df):

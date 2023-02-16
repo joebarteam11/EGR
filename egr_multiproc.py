@@ -10,9 +10,9 @@ import time
 # Use reaction mechanism GRI-Mech 3.0. For 0-D simulations,
 # no transport model is necessary.
 
-fuel = {'CH4': 1.0,'H2':0.05}         # Methane composition
+fuel = {'CH4': 1.0}         # Methane composition
 oxidizer = {'O2': 1.0, 'N2':3.76} #, 'N2':3.76
-egr = {'CO2':0.5, 'H2O':1.0}               # EGR composition
+egr = {'CO2':0.5}               # EGR composition
 
 phi_range = np.arange(0.6,1.95,0.05)
 
