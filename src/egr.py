@@ -158,6 +158,7 @@ def edit_reservoirs_mdots(reactor,mdots):
     for inlet in reactor.inlets:
         inlet.mass_flow_rate = mdots[i]
         i+=1
+
 def mixer(phi,config):
     gb = burned_gas(phi,ignition=False)
     reactor,pressure_reg = build_reactor(gb,volume=100000.0)
@@ -188,7 +189,7 @@ def reactor_0D(phi,config,power_regulation):
     #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 10
     if(power_regulation):
         i=0
-        currentpower = hrr*reactor.volume
+        currentpower = reactor.thermo.heat_release_rate*reactor.volume
         while (abs(currentpower - config.pow) > 10 and i<10):
             power_regulator = config.pow/currentpower
             mdots = [mdot*power_regulator for mdot in mdots]
@@ -204,7 +205,6 @@ def reactor_0D(phi,config,power_regulation):
             i+=1
             print(('%2i %10.3f %10.3f %10.3f %10.4f %10.4f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
     
-
     return mfcs, reactor
 
 def compute_solutions(config,phi_range,power_regulation=False,species = ['CH4','H2','O2','CO2','H2O']):
@@ -212,7 +212,6 @@ def compute_solutions(config,phi_range,power_regulation=False,species = ['CH4','
     #create a dataframe naming colums with 'phi', 'T' and all the species in the list
     #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
     df =  pd.DataFrame(columns=['EGR','phi','T']+species)
-
     print(('%10s %10s %10s %10s %10s %10s %10s' % ('phi','fuel', 'air', 'egr', 'HRR', 'T', 'P'))) 
     for phi in phi_range:
  
