@@ -14,21 +14,20 @@ fuel = {'CH4': 1.0}         # Methane composition
 oxidizer = {'O2': 1.0, 'N2':3.76} #, 'N2':3.76
 egr = {'CO2':0.5}               # EGR composition
 
-phi_range = np.arange(0.6,1.95,0.05)
+phi_range = np.arange(0.7,1.35,0.05)
 
-def task(phi_range, egr_rate, scheme='gri30.xml'):
+def task(phi_range, egr_rate, scheme='Aramco13.cti'):
     gas = ct.Solution(scheme)
     data=[]
     df = pd.DataFrame(['egr','phi','T'])
     for phi in phi_range:
-        gas.TP = 300.0, 100000.0
+        gas.TP = 300.0, 500000.0
         gas.set_equivalence_ratio(phi, fuel, oxidizer, basis="mole",
                                   diluent=egr,fraction={"diluent":egr_rate})
         #print(phi,gas['CH4'].X,gas['O2'].X,gas['N2'].X,gas['CO2'].X)
         corr_phi = float(2.0*(gas['CH4'].X+gas['H2'].X)/gas['O2'].X)
         #print('corrected_phi : ',corr_phi)
         gas.equilibrate('HP')
-        
         data.append([egr_rate,corr_phi,gas.T, gas['CH4'].X, gas['H2'].X, gas['O2'].X, gas['CO2'].X, gas['H2O'].X]) #gas['O2'].Y[0]
     return data
 

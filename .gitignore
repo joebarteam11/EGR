@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *.code-workspace
 combustor.py
+ipynb_chekpoints/
+
 # C extensions
 *.so
 
