@@ -49,8 +49,8 @@ def get_ox_mdot_v1(egr_percentage, ox_compo, egr_compo, mode='mdot_fixed', unit=
         print('The oxidizer provided does not contain pure O2 !')
     
 get_ox_mdot_v1.__doc__="Calcule un débit massique a imposer en focntion du pourcentage de egr qu'on souhaite ajouter Ce pourcentage peut etre défini comme un pourcentage de 'remplacement' d'air : on va réduired'autant le débit d'air pour conserver un débit massique total constant défini par le débit d'air sans egr à la richesse souhaitée (mode mdot_ox_fixed) Il peut aussi être considéré comme un pourcentage de egr supplémentaire, défini comme un ajout de X% du débit d'air à la richesse considérée (mode mdot_ox_free)"
-'''
-def compute_mdots(phi,config,phi_air,coeff=1.0): #, egr_rate, mdot_out, mdot_o2_egr, y_co2_out, y_o2_ox
+
+def compute_mdots(phi,config,reactor,coeff=1.0): #, egr_rate, mdot_out, mdot_o2_egr, y_co2_out, y_o2_ox
     coef=coeff*10
     mw_fuel = config.res.fuel.thermo.mean_molecular_weight/1000 #kg/mol
     mw_oxidizer = config.res.ox.thermo.mean_molecular_weight/1000 #kg/mol
@@ -64,69 +64,28 @@ def compute_mdots(phi,config,phi_air,coeff=1.0): #, egr_rate, mdot_out, mdot_o2_
     elif(config.egr_unit=='mol'):
         X_egr = config.egr_rate
     elif(config.egr_unit=='vol'):
-        X_egr = config.egr_rate/config.res.egr.thermo.volume_mole
+        X_egr = config.egr_rate*config.res.egr.thermo.density_mole
 
     X_o2_egr = config.res.egr.thermo['O2'].X*X_egr
     X_egr_no_o2 = (1-config.res.egr.thermo['O2'].X)*X_egr
     X_o2_air = (Sx*(1-X_egr_no_o2)/(phi)-X_o2_egr*(1+Sx/phi))/(1+n_mole_ox*Sx/(phi)) 
-    
-    if(phi_air):
-        X_air=(1-X_egr)*(Sx/phi)/(1+Sx/phi)
-        X_fuel=1-X_air-X_egr
-    else:
-        X_air = n_mole_ox*X_o2_air
-        X_fuel = 1-X_air-X_egr
-    #print(('%10s %10.1e %10s' % ('Effective phi',Sx*X_fuel/X_air,str(phi_air)))) 
+    X_air = n_mole_ox*X_o2_air
+    X_fuel = 1-X_air-X_egr
+    #phi_cor = Sx*X_fuel/(X_o2_air+X_o2_egr)
+    #print(phi,phi_cor)
     mdot_tot = X_fuel*coef*mw_fuel + X_air*coef*mw_oxidizer + X_egr*coef*mw_egr
-    print(mdot_tot)
+    #print(config.res.egr.thermo['O2'].X,config.res.ox_gas['N2'].X)
+    #print(('%10.4f %10.4f %10.4f %10.4f')%(moldot_fuel,moldot_o2,moldot_air,moldot_egr))
     return [X_fuel*coef*mw_fuel, X_air*coef*mw_oxidizer, X_egr*coef*mw_egr], mdot_tot#, phi_cor
-'''
-def compute_mdots(phi,config,phi_air,coeff=1.0): #, egr_rate, mdot_out, mdot_o2_egr, y_co2_out, y_o2_ox
-    coef=coeff*10
-    mw_fuel = config.res.fuel.thermo.mean_molecular_weight/1000 #kg/mol
-    mw_oxidizer = config.res.ox.thermo.mean_molecular_weight/1000 #kg/mol
-    mw_egr = config.res.egr.thermo.mean_molecular_weight/1000 #kg/mol
 
-    Sx=2.0
-    Sy=17.16
-    n_mole_ox = 4.76
-    
-    if(config.egr_unit=='mass'):
-        fuel_mass=phi/(Sy+phi)
-        air_mass=1-fuel_mass
-        egr_mass=(config.egr_rate/(1-config.egr_rate))*(fuel_mass+air_mass)
-        res=[fuel_mass*coef, air_mass*coef, egr_mass*coef]
-        print(sum(res))
-        return res, sum(res)#, phi_cor
-    
-    elif(config.egr_unit=='mol'):
-        fuel_mol = phi/(n_mole_ox*Sx+phi)
-        air_mol = 1-fuel_mol
-        egr_mol=(config.egr_rate/(1-config.egr_rate))*(fuel_mol+air_mol)
-        res=[fuel_mol*coef*mw_fuel, air_mol*coef*mw_oxidizer, egr_mol*coef*mw_egr]
-        print(sum(res))
-        return res, sum(res)#, phi_cor
-
-    elif(config.egr_unit=='vol'):
-        coef=coef/1000
-        fuel_mol = phi/(n_mole_ox*Sx+phi)
-        fuel_vol = fuel_mol * config.res.fuel.thermo.volume_mole
-        air_vol = (1-fuel_mol) * config.res.ox.thermo.volume_mole
-        egr_vol=(config.egr_rate/(1-config.egr_rate))*(fuel_vol+air_vol)
-        res=[fuel_vol*coef*config.res.fuel.thermo.density_mass, air_vol*coef*config.res.ox.thermo.density_mass, egr_vol*coef*config.res.egr.thermo.density_mass]
-        print(sum(res))
-        return res, sum(res)#, phi_cor
-
-    else:
-        return None, None
-   
 class case:
-    def __init__(self,fuel,ox,egr,Q,egr_rate,egr_unit):
+    def __init__(self,fuel,ox,egr,Q,egr_rate,egr_unit,mode='mdot_fixed'):
         self.compo = self.Compo(fuel,ox,egr)
         self.res = self.Reservoirs()
         self.pow = Q
         self.egr_rate = egr_rate
         self.egr_unit = egr_unit
+        self.mode = mode
 
     class Compo:
         def __init__(self,fuel,ox,egr):
@@ -140,16 +99,15 @@ class case:
             self.ox = None
             self.egr = None
 
-def create_reservoir(content, scheme, T, P):
-    gas = ct.Solution(scheme)
-    gas.TPX = T, P, content
+def create_reservoir(params):
+    gas = ct.Solution(params['scheme'])
+    gas.TPX = params['T'], params['P'], params['compo']
     return ct.Reservoir(gas)
 
-def burned_gas(phi,p,config,scheme='gri30.xml',ignition=True):
+def burned_gas(phi,p,compo='O2:1.,N2:3.76, CH4:0.5',scheme='gri30.xml',ignition=True):
     gas = ct.Solution(scheme)
-    gas.TP = 300.0,p
-    gas.set_equivalence_ratio(phi, config.compo.fuel, config.compo.ox, basis="mole",
-                              diluent=config.compo.egr,fraction={"diluent":config.egr_rate})
+    gas.TPX = 400.0,p,compo
+    gas.set_equivalence_ratio(phi, 'CH4', 'O2:1.0, N2:3.76')
     if(ignition):
         gas.equilibrate("HP")
     return gas
@@ -174,68 +132,62 @@ def edit_reservoirs_mdots(reactor,mdots):
         inlet.mass_flow_rate = mdots[i]
         i+=1
 
-def mixer(phi,config,phi_air=False):
-    gb = burned_gas(phi,config.res.ox.thermo.P,config,scheme=config.res.fuel.thermo.source,ignition=False)
+def mixer(phi,config):
+    gb = burned_gas(phi,config.res.ox.thermo.P,scheme=config.res.fuel.thermo.source,ignition=False)
     reactor,pressure_reg = build_reactor(gb,volume=100000.0)
     #create the reactor network
     
     sim=ct.ReactorNet([reactor])
-    sim.rtol = 1e-12
-    sim.atol = 1e-12
+    sim.rtol = 1e-10
+    sim.atol = 1e-10
     sim.initialize()
     #set the mass flow controllers according to phi and egr rate asked in the config
-    mdots,mdot_tot = compute_mdots(phi, config, phi_air)
+    mdots,mdot_tot = compute_mdots(phi, config, reactor)
     mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
     #compute steady state
     sim.advance_to_steady_state()
     return reactor.T, reactor.thermo.P, reactor.thermo.X
 
-def reactor_0D(phi,config,real_egr,phi_air):
+def reactor_0D(phi,config,power_regulation):
     #create the reactor and fill it with burned gas to ignite the mixture
-    gb = burned_gas(phi,config.res.ox.thermo.P,config,scheme=config.res.fuel.thermo.source,ignition=True)
-    reactor,pressure_reg = build_reactor(gb,volume=1000000.0)
+    gb = burned_gas(phi,config.res.ox.thermo.P,ignition=True,scheme=config.res.fuel.thermo.source)
+    reactor,pressure_reg = build_reactor(gb,volume=100000.0)
     #create the reactor network
     sim=ct.ReactorNet([reactor])
-    sim.rtol = 1e-11
-    sim.atol = 1e-11
-    #sim.max_steps = 200000
-    sim.initialize()
-    #set the mass flow controllers according to phi and egr rate asked in the config
-    mdots,mdot_tot = compute_mdots(phi, config, phi_air)
-    
-    mfcs = None
-    #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 10
-    if(real_egr):
-        # i=0
-        # currentpower = reactor.thermo.heat_release_rate*reactor.volume
-        # while (abs(currentpower - config.pow) > 10 and i<10):
-        #     power_regulator = config.pow/currentpower
-        #     mdots = [mdot*power_regulator for mdot in mdots]
-        #     #print(mdots)
-        #     edit_reservoirs_mdots(reactor, mdots)
-        #     sim.reinitialize()
-        #     try:
-        #         sim.advance_to_steady_state()
-        #     except:
-        #         print('unknown error trying to reach steady state (power regulation)')
-        #         break
-        #     currentpower = reactor.thermo.heat_release_rate*reactor.volume
-        #     i+=1
-        #     print(('%2i %10.3f %10.3f %10.3f %10.4f %10.4f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
-        mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,reactor],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
 
-    else:
-        mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
-    
+    sim.initialize()
+    #sim.setTolerances(sim,rtol=1e-10, atol=1e-10)
+    #set the mass flow controllers according to phi and egr rate asked in the config
+    mdots,mdot_tot = compute_mdots(phi, config, reactor)
+    mfcs = init_reservoirs_mdots([config.res.fuel, config.res.ox,config.res.egr],mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
     #compute steady state
     sim.advance_to_steady_state()
+
+    #create a loop to compute the mdots until the power is reached within a certain margin and limit the number of iterations to 10
+    if(power_regulation):
+        i=0
+        currentpower = reactor.thermo.heat_release_rate*reactor.volume
+        while (abs(currentpower - config.pow) > 10 and i<10):
+            power_regulator = config.pow/currentpower
+            mdots = [mdot*power_regulator for mdot in mdots]
+            #print(mdots)
+            edit_reservoirs_mdots(reactor, mdots)
+            sim.reinitialize()
+            try:
+                sim.advance_to_steady_state()
+            except:
+                print('unknown error trying to reach steady state (power regulation)')
+                break
+            currentpower = reactor.thermo.heat_release_rate*reactor.volume
+            i+=1
+            print(('%2i %10.3f %10.3f %10.3f %10.4f %10.4f' % (i, mfcs[0].mass_flow_rate, mfcs[1].mass_flow_rate, mfcs[2].mass_flow_rate, reactor.thermo.heat_release_rate*reactor.volume, reactor.T)))
+    
     return mfcs, reactor
 
-def fresh_gas(phi,p,config,scheme='gri30.xml'):
+def fresh_gas(phi,p,compo='O2:1.,N2:3.76, CH4:0.5',scheme='gri30.xml'):
     gas = ct.Solution(scheme)
-    gas.TP = 300.0,p
-    gas.set_equivalence_ratio(phi, config.compo.fuel, config.compo.ox, basis="mole",
-                              diluent=config.compo.egr,fraction={"diluent":config.egr_rate})
+    gas.TPX = 300.0,p,compo
+    gas.set_equivalence_ratio(phi, 'CH4', 'O2:1.0, N2:3.76')
     return gas
 
 def build_freeflame(mix):
@@ -249,7 +201,7 @@ def solve_flame(f):
     #################################################################
     loglevel  = 0                       # amount of diagnostic output (0 to 5)	    
     refine_grid = True                  # True to enable refinement, False to disable 	
-    f.max_time_step_count=100000
+
     # first iteration
     ##################
     # No energy equilibrium activated (reduce the calculation)
@@ -299,7 +251,7 @@ def solve_flame(f):
     
     return f
 
-def compute_solutions_0D(config,phi_range,real_egr=False,phi_air=False,species = ['CH4','H2','O2','CO2','H2O']):
+def compute_solutions_0D(config,phi_range,power_regulation=False,species = ['CH4','H2','O2','CO2','H2O']):
     data=np.zeros((len(phi_range),8))
     #create a dataframe naming colums with 'phi', 'T' and all the species in the list
     #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
@@ -307,7 +259,7 @@ def compute_solutions_0D(config,phi_range,real_egr=False,phi_air=False,species =
     print(('%10s %10s %10s %10s %10s %10s %10s' % ('phi','fuel', 'air', 'egr', 'HRR', 'T', 'P'))) 
     for phi in phi_range:
  
-        mfcs, reactor = reactor_0D(phi,config,real_egr,phi_air)
+        mfcs, reactor = reactor_0D(phi,config,power_regulation)
         moldot_tot = mfcs[0].mass_flow_rate/(config.res.fuel.thermo.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.res.ox.thermo.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.res.egr.thermo.mean_molecular_weight/1000)
         #print(('%10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, (mfcs[2].mass_flow_rate/mdot_tot), reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
         print((' %10.3f %10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (phi, (mfcs[0].mass_flow_rate/(config.res.fuel.thermo.mean_molecular_weight/1000))/moldot_tot, 
@@ -320,10 +272,10 @@ def compute_solutions_0D(config,phi_range,real_egr=False,phi_air=False,species =
         data[np.where(phi_range==phi), 1] = reactor.T
         data[np.where(phi_range==phi), 2] = reactor.thermo.heat_release_rate
         data[np.where(phi_range==phi), 3:] = reactor.thermo['CH4','H2','O2','CO2','H2O'].X
- 
+    
     return reactor, data, df
 
-def compute_solutions_1D(config,phi_range,real_egr=False,phi_air=False,species = ['CH4','H2','O2','CO','CO2','H2O']):
+def compute_solutions_1D(config,phi_range,power_regulation=False,species = ['CH4','H2','O2','CO2','H2O']):
     #mdots,mdot_tot = compute_mdots(1.0, config)
     data=np.zeros((len(phi_range),8))
     #create a dataframe naming colums with 'phi', 'T' and all the species in the list
@@ -331,50 +283,47 @@ def compute_solutions_1D(config,phi_range,real_egr=False,phi_air=False,species =
     df =  pd.DataFrame(columns=['EGR','phi','P','Tin','T','u']+species)
     
     for phi in phi_range:
-        f = build_freeflame(fresh_gas(phi,config.res.ox.thermo.P,config,scheme=config.res.fuel.thermo.source))
+        f = build_freeflame(fresh_gas(phi,config.res.ox.thermo.P,scheme=config.res.fuel.thermo.source))
 
-        tol_ss = [1.0e-7, 1.0e-8]  # tolerance [rtol atol] for steady-state problem
-        tol_ts = [1.0e-7, 1.0e-8]  # tolerance [rtol atol] for time stepping
+        tol_ss = [1.0e-5, 1.0e-8]  # tolerance [rtol atol] for steady-state problem
+        tol_ts = [1.0e-5, 1.0e-8]  # tolerance [rtol atol] for time stepping
 
         f.flame.set_steady_tolerances(default=tol_ss)
         f.flame.set_transient_tolerances(default=tol_ts)
-        
-        T,P,X = mixer(phi, config, phi_air)
+
+        T,P,X = mixer(phi, config)
 
         f.inlet.T = T
         f.P = P
         f.inlet.X = X
-        print('flame CH4 X',f.inlet.X[13])
+        print('flame',f.inlet.X[13])
 
         f = solve_flame(f)
-        f.save('flame.xml', config.res.fuel.thermo.source, 'Solution with phi = {:7.3f}, egr_rate = {:7.3f}'.format(phi,config.egr_rate))
         index = [f.gas.species_index(specie) for specie in species]
         #print(list(f.X[index,-1]))
-        # dico = {'grid':f.grid,
-        #         'EGRrate':config.egr_rate, 
-        #         'phi':phi,
-        #         'Pin':P, 
-        #         'Tin':T, 
-        #         'Xin':X,
-        #         'T':f.T, 
-        #         'u':f.velocity,
-        #         'X_CH4':f.X[index,:], 
-        #         'X_H2':f.X[index,:], 
-        #         'X_O2':f.X[index,:], 
-        #         'X_CO':f.X[index,:], 
-        #         'X_CO2':f.X[index,:], 
-        #         'X_H2O':f.X[index,:], 
-        #         'Y_CH4':f.Y[index,:], 
-        #         'Y_H2':f.Y[index,:], 
-        #         'Y_O2':f.Y[index,:],
-        #         'Y_CO':f.Y[index,:],
-        #         'Y_CO2':f.Y[index,:], 
-        #         'Y_H2O':f.Y[index,:]}
+        dico = {'grid':f.grid,
+                'EGRrate':config.egr_rate, 
+                'phi':phi,
+                'Pin':P, 
+                'Tin':T, 
+                'Xin':X,
+                'T':f.T, 
+                'u':f.velocity,
+                'X_CH4':f.X[index,-1], 
+                'X_H2':f.X[index,-1], 
+                'X_O2':f.X[index,-1], 
+                'X_CO2':f.X[index,-1], 
+                'X_H2O':f.X[index,-1], 
+                'Y_CH4':f.Y[index,-1], 
+                'Y_H2':f.Y[index,-1], 
+                'Y_O2':f.Y[index,-1], 
+                'Y_CO2':f.Y[index,-1], 
+                'Y_H2O':f.Y[index,-1]}
         df = pd.concat([df, pd.DataFrame([[config.egr_rate, phi, P, T, f.T[-1], f.velocity[0]]+list(f.X[index,-1])], columns=['EGR','phi','P','Tin','T','u']+species)]).astype(float) #+list(f.X[index][-1])] #
         data[np.where(phi_range==phi), 0] = phi
         data[np.where(phi_range==phi), 1] = f.T[-1]
         data[np.where(phi_range==phi), 2] = f.velocity[0]
-        #data[np.where(phi_range==phi), 3:] = f.X[index,-1]
+        data[np.where(phi_range==phi), 3:] = f.X[index,-1]
     return f, data, df
 
 def print_reactor(df):
