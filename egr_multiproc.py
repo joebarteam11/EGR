@@ -14,9 +14,9 @@ fuel = {'CH4': 1.0}         # Methane composition
 oxidizer = {'O2': 1.0, 'N2':3.76} #, 'N2':3.76
 egr = {'CO2':0.5}               # EGR composition
 
-phi_range = np.arange(0.7,1.35,0.05)
+phi_range = np.arange(0.7,1.25,0.025)
 
-def task(phi_range, egr_rate,p, scheme='gri30.cti'):
+def task(phi_range, egr_rate,p, scheme='Aramco13.cti'):
     gas = ct.Solution(scheme)
     data=[]
     df = pd.DataFrame(['egr','phi','T'])
@@ -40,7 +40,7 @@ def main(pressures):
         # start the process pool
         with ProcessPoolExecutor(max_workers=4)as executor:
             # submit many tasks
-            egr_range = [0.0,0.1] #np.arange(0.0,0.11,0.1)
+            egr_range = [0.0,0.1,0.3] #np.arange(0.0,0.11,0.1)
             futures = [executor.submit(task,phi_range,egr,p) for egr in egr_range]
             print('Waiting for tasks to complete...')
             # update each time a task finishes
@@ -57,7 +57,7 @@ def main(pressures):
 
 def plot(df,fig,ax,pressures):
 
-    egr_percentages = [0.0,0.1]
+    egr_percentages = [0.0,0.1,0.3]
     human_labels = [str(round(p/100000,1))+' bar, '+str(round(e*100,1))+"%EGRmol" for p in pressures for e in egr_percentages]
     df.plot(ax=ax, style='x',title='Temperature vs equivalence ratio',xlabel='Equivalence ratio',ylabel='T',legend=False, label='EGR equilibrate')
     fig.tight_layout()
