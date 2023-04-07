@@ -9,9 +9,12 @@ import multiprocessing as mp
 from packaging import version
 #from alive_progress import alive_bar
 from tqdm import tqdm
+import warnings
 
-sys.path.append(os.getcwd())
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+class FlameExtinguished(Exception):
+    pass
 
 class case:
     def __init__(self,fuel,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,egr_range,egr_unit,scheme):
@@ -84,6 +87,8 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
     mw_oxidizer = config.gas.ox.mean_molecular_weight/1000 #kg/mol
     mw_egr = config.gas.egr.mean_molecular_weight/1000 #kg/mol
     mol_weights=[mw_fuel,mw_oxidizer,mw_egr]
+
+    warnings.warn('compute_mdots() is setted for methane-air mixtures only, change Sx, Sy and n_mole_ox for others reactants', UserWarning)
     Sx=2.0
     Sy=17.16
     n_mole_ox=4.76
@@ -93,10 +98,11 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
         air_mass=1-fuel_mass
         egr_mass=(egr_rate/(1-egr_rate))*(fuel_mass+air_mass)
         mdots=[fuel_mass*coef, air_mass*coef, egr_mass*coef]
-        #print(sum(mdots))
+        
         if(return_unit=='mass'):
             return mdots, sum(mdots)
         elif(return_unit=='mole'):
+            warnings.warn('not tested yet, use mass instead', UserWarning)
             moldots=[m/n for m, n in zip(mdots,mol_weights)]
             return moldots, sum(moldots)
     
@@ -105,10 +111,11 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
         air_mol = 1-fuel_mol
         egr_mol=(egr_rate/(1-egr_rate))*(fuel_mol)
         mdots=[fuel_mol*coef*mw_fuel, air_mol*coef*mw_oxidizer, egr_mol*coef*mw_egr]
-        #print(sum(mdots))
+        
         if(return_unit=='mass'):
             return mdots, sum(mdots)
         elif(return_unit=='mole'):
+            warnings.warn('not tested yet, use mass instead', UserWarning)
             moldots=[m/n for m, n in zip(mdots,mol_weights)]
             return moldots, sum(moldots)
 
@@ -119,10 +126,11 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
         air_vol = (1-fuel_mol) * config.gas.ox.volume_mole
         egr_vol=(egr_rate/(1-egr_rate))*(fuel_vol+air_vol)
         mdots=[fuel_vol*coef*config.gas.fuel.density_mass, air_vol*coef*config.gas.ox.density_mass, egr_vol*coef*config.gas.egr.density_mass]
-        #print(sum(mdots))
+        
         if(return_unit=='mass'):
             return mdots, sum(mdots)
         elif(return_unit=='mole'):
+            warnings.warn('not tested yet, use mass instead', UserWarning)
             moldots=[m/n for m, n in zip(mdots,mol_weights)]
             return moldots, sum(moldots)
 
@@ -243,32 +251,13 @@ def fresh_gas(phi,config,egr_rate,Tmix,Pmix):
 
     return gas
 
-def build_freeflame(mix,width=0.2):
+def build_freeflame(mix,width=0.03):
     #mix = ct.Mixer(inlets=mfcs) #energy eq. is on by default
     flame = ct.FreeFlame(mix, width=width)
     return flame
 
+
 def mixer(phi,config,egr):
-    gb = burned_gas(phi,config,egr,ignition=False)
-    reactor,pressure_reg = build_reactor(gb,volume=1000.0)
-    reservoirs = [config.res.fuel, config.res.ox, config.res.egr]
-    #create the reactor network
-    
-    sim=ct.ReactorNet([reactor])
-    sim.rtol = 1e-8
-    sim.atol = 1e-8
-    sim.reinitialize()
-    #set the mass flow controllers according to phi and egr rate asked in the config
-    mdots,mdot_tot = compute_mdots(config, egr, phi)
-    mfcs = init_reservoirs_mdots(reservoirs,mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
-    #compute steady state
-    sim.advance_to_steady_state()
-    #sim.set_initial_time(0.0)
-    #sim.advance(10000) #large number to ensure that the steady state is reached i.e. gas as travelled enough trough the reactor volume
-
-    return reactor.T, reactor.thermo.P, reactor.thermo.X
-
-def mixer2(phi,config,egr):
     gas=ct.Solution(config.scheme)
     moldots,moldot_tot = compute_mdots(config, egr, phi,return_unit='mass')
 
@@ -286,21 +275,19 @@ def mixer2(phi,config,egr):
     #print(mix.report())
     return mix.T, mix.P, mix.X
 
-def compute_solutions_1D(config,phi,egr,tin,pin=[1e5,1e5,1e5],real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O']):
-    #create the gas object
+def compute_solutions_1D(config,phi,tin,pin,egr,previous_rate,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O']):
+    #create the gas object containing the mixture of fuel, ox and egr and all thermo data
     _, config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme,tin[0], pin[0])
     _, config.gas.ox = create_reservoir(config.compo.ox,'air.xml', tin[1], pin[1])
     _, config.gas.egr = create_reservoir(config.compo.egr,config.scheme, tin[2], pin[2])
-    #mdots,mdot_tot = compute_mdots(1.0, config)
-    #data=np.zeros((len(phi_range),8))
+
     #create a dataframe naming colums with 'phi', 'T' and all the species in the list
     #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
-    df =  pd.DataFrame(columns=['EGR','phi','P','Tin','T','u']+species)
-    
-    #for egr in config.egr_range:
-        #for phi in config.phi_range:
+    vartosave = ['EGR','phi','P','Tin','T','u']+species
+    df =  pd.DataFrame(columns=vartosave)
 
-    T,P,X = mixer2(phi, config,egr)
+    #get the temperature and pressure of the mixture according to phi and egr rate
+    T,P,X = mixer(phi, config,egr)
     f = build_freeflame(fresh_gas(phi,config,egr,T,P))
 
     tol_ss = [1.0e-7, 1.0e-8]  # tolerance [rtol atol] for steady-state problem
@@ -308,86 +295,148 @@ def compute_solutions_1D(config,phi,egr,tin,pin=[1e5,1e5,1e5],real_egr=False,spe
 
     f.flame.set_steady_tolerances(default=tol_ss)
     f.flame.set_transient_tolerances(default=tol_ts)
-
-    #mixer2(phi, config,egr)
     
+    #print('flame X_CH4',f.inlet.thermo['CH4'].X)
+    #print(('%10s %10s %10s %10s %10s %10s' % ('phi','Xfuel', 'Xair', 'Xegr', 'T', 'P'))) 
+    #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
+    flametitle=''
+    if(previous_rate is None):
+        flametitle = 'data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
+        f.set_initial_guess()
+    else:
+        flametitle = 'data/'+'egr'+str(round(previous_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
+        f.restore(flametitle)
+        flametitle = 'data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
+
 
     f.inlet.T = T
     f.P = P
     f.inlet.X = X
-    #print('flame X_CH4',f.inlet.thermo['CH4'].X)
-    #print(('%10s %10s %10s %10s %10s %10s' % ('phi','Xfuel', 'Xair', 'Xegr', 'T', 'P'))) 
-    #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
-    #flametitle = 'flame'+str(phi)+str(egr)+str(round(config.res.ox.thermo.T,0))+str(round(config.res.ox.thermo.P/100000,1))+config.compo.fuel+config.compo.ox+config.compo.egr
-    f = solve_flame(f)
-    #f.save(flametitle+'.xml')
-    #f.save('flame.xml', config.res.fuel.thermo.source, 'Solution with phi = {:7.3f}, egr_rate = {:7.3f}'.format(phi,config.egr_rate))
-    index = [f.gas.species_index(specie) for specie in species]
+    flame = solve_flame(f,flametitle)
+    
+    
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
         SL0=f.velocity[0]
     else:
         SL0=f.u[0]
-    df = pd.concat([df, pd.DataFrame([[egr, phi, P, T, f.T[-1],SL0]+list(f.X[index,-1])], columns=['EGR','phi','P','Tin','T','u']+species)]).astype(float) #+list(f.X[index][-1])] #
+
+    index = [f.gas.species_index(specie) for specie in species]
+    df = pd.concat([df, pd.DataFrame([[egr, phi, P, T, f.T[-1],SL0]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
 
     return df
 
-def solve_flame(f):
+def solve_flame(f,flametitle):
     #################################################################
     # Iterations start here
     #################################################################
-    loglevel  = 0                       # amount of diagnostic output (0 to 5)	    
+    verbose = 1
+    loglevel  = 1                       # amount of diagnostic output (0 to 5)	    
     refine_grid = True                  # True to enable refinement, False to disable 	
-    f.max_time_step_count=100000
+    f.max_time_step_count=1000
+    f.max_grid_points=500
+    
     # first iteration
     ##################
     # No energy equilibrium activated (reduce the calculation)
     f.energy_enabled = False
     # Mesh refinement
-    f.set_refine_criteria(ratio = 7.0, slope = 1, curve = 1)
+    f.set_refine_criteria(ratio = 7.0, slope = 0.95, curve = 0.95)
     # Max number of times the Jacobian will be used before it must be re-evaluated
     f.set_max_jac_age(50, 50)
     #Set time steps whenever Newton convergence fails
-    f.set_time_step(0.1e-06, [2, 5,10, 20, 80]) #s
-    # Calculation
-    f.solve(loglevel, refine_grid)
+    f.set_time_step(5e-08, [25, 40, 80, 140, 200, 350]) #s
 
+    # Calculation
+    if(verbose>0):
+        print('1st iteration...')
+    try:
+        f.solve(loglevel, refine_grid)
+        #f.save(flametitle)
+    except FlameExtinguished:
+        print('Flame extinguished')
+        
+    except ct.CanteraError as e:
+        print('Error occurred while solving:', e)
+        
     # Second iteration
     #################
     # Energy equation activated
     f.energy_enabled = True
     # mesh refinement
-    f.set_refine_criteria(ratio = 5.0, slope = 0.5, curve = 0.5)
+    f.set_refine_criteria(ratio = 5.0, slope = 0.7, curve = 0.7)
     # Calculation
-    f.solve(loglevel, refine_grid)
-    
+    if(verbose>0):
+        print('2nd iteration...')
+    try:
+        f.solve(loglevel, refine_grid)
+        #f.save(flametitle)
+    except FlameExtinguished:
+        print('Flame extinguished')
+        
+    except ct.CanteraError as e:
+        print('Error occurred while solving:', e)
+        
     # Third iteration
     #################
     # On raffine le maillage
-    f.set_refine_criteria(ratio = 5.0, slope = 0.3, curve = 0.3)
+    f.set_refine_criteria(ratio = 5.0, slope = 0.4, curve = 0.4, prune = 0.03)
     # Calculation
-    f.solve(loglevel, refine_grid)
+    if(verbose>0):
+        print('3rd iteration...')
+    try:
+        f.solve(loglevel, refine_grid)
+        #f.save(flametitle)
+    except FlameExtinguished:
+        print('Flame extinguished')
+        
+    except ct.CanteraError as e:
+        print('Error occurred while solving:', e)
+        
     #################
-    # Quatri�me it�ration
+    # Fourth iteration
     # Mesh refinement
-    f.set_refine_criteria(ratio = 5.0, slope = 0.1, curve = 0.1)
+    f.set_refine_criteria(ratio = 5.0, slope = 0.1, curve = 0.1, prune = 0.01)
     # Calculation
-    f.solve(loglevel, refine_grid)
+    if(verbose>0):
+        print('4th iteration...')
+    try:
+        f.solve(loglevel, refine_grid)
+        f.save(flametitle)
+    except FlameExtinguished:
+        print('Flame extinguished')
+        
+    except ct.CanteraError as e:
+        print('Error occurred while solving:', e)
+        
     # Fifth iteration
     #################
-    # Mesh refinement
+    #Mesh refinement
     f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
     # Calculation
-    f.solve(loglevel, refine_grid)
-    # Six iteration
-    #################
-    # Mesh refinement
-    f.set_refine_criteria(ratio = 5.0, slope = 0.02, curve = 0.02, prune = 0.01)
-    # Calculation
-    f.solve(loglevel, refine_grid)
+    if(verbose>0):
+        print('5th iteration...')
+    try:
+        f.solve(loglevel, refine_grid)
+        f.save(flametitle)
+    except FlameExtinguished:
+        print('Flame extinguished')
+        
+    except ct.CanteraError as e:
+        print('Error occurred while solving:', e)
+    # # Sixth iteration
+    # #################
+    # # Mesh refinement
+    # f.set_refine_criteria(ratio = 5.0, slope = 0.02, curve = 0.02, prune = 0.01)
+    # # Calculation
+    # if(verbose>0):
+    #     print('6th iteration...')
+    # f.solve(loglevel, refine_grid)
+    # f.save(flametitle)
     
     return f
 
 def show_graphs(df,title=None,labels=None,xlabel=None,ylabel=None,style='-o',subplot=1,ax=None,plot=True,save=False,path=None):
+    warnings.warn("This function is still under developpement and may not work properly", UserWarning)
     if(ax==None):
         fig, ax = plt.subplots(1,subplot)
     if(version.parse(matplotlib.__version__) >= version.parse('3.5.0')):
@@ -414,7 +463,6 @@ if __name__ == '__main__':
     path = os.getcwd()
     print('Current folder: ',path)
     print(f"Running Cantera version: {ct.__version__}")
-    #print(f"Running Python version: {sys.version}")
     print(f"Running Matplotlib version: {matplotlib.__version__}")
 
     # get the start time
@@ -429,58 +477,47 @@ if __name__ == '__main__':
                   'CO2:1.',                     #egr compo
                   [300],                    #tin egr
                   [1e5,5e5],                        #pin egr
-                  [0.8,0.85,0.9,0.95,1.0,1.05,1.1,1.15,1.2],        #phi range
-                  [0.0,0.1,0.3,0.5,0,7],            #egr range
+                  [i for i in np.arange(0.8,1.21,0.05)],        #phi range
+                  [0.5,0.7],            #egr range
                   'mole',                       #egr rate unit
-                  'Aramco13.cti'                   #scheme
+                  'schemes/Aramco13.cti'                   #scheme
                  )
     
     Tins = [[t[i] for t in config.tin] for i in range(len(config.tin.fuel))]
     Pins = [[p[i] for p in config.pin] for i in range(len(config.pin.fuel))]
 
-    items = [[config,phi,egr,Tin,Pin] for phi in config.phi_range for egr in config.egr_range for Tin in Tins for Pin in Pins]
+    items = [[config,phi,Tin,Pin] for phi in config.phi_range for Tin in Tins for Pin in Pins]
     #print(items)
-
-    
 
     ncpu = mp.cpu_count()
     print('nCPU :',ncpu)
     print('nItems :',len(items))
 
-    pbar=tqdm(total=len(items),file=sys.stdout) 
+    #Progress bar declaration
+    pbar=tqdm(total=len(items)*len(config.egr_range),file=sys.stdout) 
     def update(*a):
         pbar.update()
 
-    pool = mp.Pool(min(len(items),ncpu))
-    results = [pool.apply_async(compute_solutions_1D, args=item, callback=update) for item in items]
-    #pbar.display()
-    pool.close()
-    # wait for all tasks to complete and processes to close
-    pool.join()
+    if(True):
+        previous_rate = 0.3
+        for egr in config.egr_range:
+            #Computation pool 
+            pool = mp.Pool(min(len(items),ncpu))
+            results = [pool.apply_async(compute_solutions_1D, args=item+[egr,previous_rate], callback=update) for item in items]
+            pool.close()
+            # wait for all tasks to complete and processes to close
+            pool.join()
+            previous_rate = egr
+            #get results & store them in csv
+            unpacked=[res.get() for res in results]
+            output=pd.concat(unpacked,axis=0)
+            output.to_csv(path+'/plan_partiel_dilution_'+str(round(egr,1))+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
 
-    unpacked=[res.get() for res in results]
-    #print(unpacked)
-    output=pd.concat(unpacked,axis=0)
-    output.to_csv(path+'/plan_complet_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+            print(output)
 
-    print(output)
     
-    et = time.time()
     # get the execution time
+    et = time.time()
     elapsed_time = et - st
 
     print('Execution time:', elapsed_time, 'seconds')
-
-    # var_to_plot=['T','u']
-    # labels = ['Tad[K]','u[m.s-1]',]
-    # titles = ['Flame temperature', 'Laminar flame velocity',]
-    
-    # for idx,var in enumerate(var_to_plot):
-    #     data=output.pivot_table(index='phi',columns='EGR',values=var)
-
-    #     title='(1D) '+titles[idx]+' vs equivalence ratio (Tin_EGR:'+str(config.tin.egr[0])+'K)'
-    #     human_labels = [str(round(p/100000,1))+' bar, '+str(round(e*100,1))+"%EGR"+config.egr_unit for p in config.pin.ox for e in config.egr_range]
-    #     xlabel='Phi'
-    #     ylabel=labels[idx]
-
-    #     show_graphs(data,title,human_labels,xlabel,ylabel,subplot=1,save=True,path=path+'/img/')

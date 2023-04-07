@@ -1,3 +1,4 @@
+import sys, os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import *
@@ -7,6 +8,8 @@ from concurrent.futures import as_completed
 import pandas as pd
 import time
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 # Use reaction mechanism GRI-Mech 3.0. For 0-D simulations,
 # no transport model is necessary.
 
@@ -14,12 +17,12 @@ fuel = {'CH4': 1.0}         # Methane composition
 oxidizer = {'O2': 1.0, 'N2':3.76} #, 'N2':3.76
 egr = {'CO2':0.5}               # EGR composition
 
-phi_range = np.arange(0.7,1.25,0.025)
+phi_range = np.arange(0.7,1.25,0.02)
 
-def task(phi_range, egr_rate,p, scheme='Aramco13.cti'):
+def task(phi_range, egr_rate,p, scheme='schemes/Aramco13.cti'):
     gas = ct.Solution(scheme)
     data=[]
-    df = pd.DataFrame(['egr','phi','T'])
+    df = pd.DataFrame(['EGR','phi','T'])
     for phi in phi_range:
         gas.TP = 300.0, p
         gas.set_equivalence_ratio(phi, fuel, oxidizer, basis="mole",
@@ -48,7 +51,7 @@ def main(pressures):
                 # report the number of remaining tasks
                 print(f'About {len(executor._pending_work_items)} tasks remain')
         print('Done')
-        df = pd.DataFrame([{'EGR':item[0], 'phi':item[1], 'T':item[2], 'CH4':item[3], 'H2':item[4], 'O2':item[5], 'CO2':item[6], 'H2O':item[7]} for future in futures for item in future.result()]).astype(float)
+        df = pd.DataFrame([{'EGR':item[0], 'phi':item[1], 'T':item[2], 'CH4':item[3], 'H2':item[4], 'O2':item[5], 'CO2':item[6], 'H2O':item[7]} for future in futures for item in future.result()]).astype(float).round({'EGR':1,'phi':2})
         #df=df.pivot_table(columns='EGR',index='phi',values='T')
         dfs.append(df)
     #dfsc=pd.concat(dfs, axis = 1, keys = pressures)

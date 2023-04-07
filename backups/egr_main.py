@@ -1,6 +1,6 @@
 from lib_egr_260 import *
 import time
-from egr_multiproc import *
+from src.egr_equilibrate_multiproc import *
 import pandas as pd
 
 if __name__ == '__main__':

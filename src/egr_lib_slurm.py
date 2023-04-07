@@ -14,11 +14,11 @@ from dask_mpi import initialize
 #initialize()
 from dask.distributed import Client,progress
 #from dask.diagnostics import ProgressBar
-from src.lib_egr_260 import *
+from lib_egr_260 import *
 
 sys.path.append(os.getcwd())
-
 path = os.getcwd()
+
 print('Time :',time.strftime("%Y%m%d-%H%M%S"))
 print('Current folder: ',path)
 print(f"Running Cantera version: {ct.__version__}")
@@ -67,8 +67,8 @@ ncpu = mp.cpu_count()
 print('nCPU :',ncpu)
 print('nCase :',len(items))
 print([i for i in zip(items)])
-solve=True
 
+solve=True
 
 if(solve):
     
@@ -93,15 +93,3 @@ if(solve):
     data.to_csv(path+'/plan_complet_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
 
     print(data)
-    #pool = mp.Pool(min(len(items),ncpu))
-    #results = [pool.apply_async(compute_solutions_1D, args=item, callback=update) for item in items]
-    #pool.close()
-    # wait for all tasks to complete and processes to close
-    #pool.join()
-
-    #unpacked=[res.get() for res in results]
-    #print(unpacked)
-    #output=pd.concat(unpacked,axis=0)
-    #output.to_csv(path+'/plan_complet_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
-
-    #print(output)
