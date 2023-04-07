@@ -67,7 +67,8 @@ def compute_mdots(config,egr_rate,phi,coef=50.0):
     
 def create_reservoir(content, scheme, T, P):
     gas = ct.Solution(scheme)
-    gas.TPX = T, P, content
+    gas.TP = T, P
+    gas.set_equivalence_ratio(1.0, content, 'O2:1.0, N2:3.76')
     return ct.Reservoir(gas)
 
 def burned_gas(phi,config,egr_rate,scheme,ignition=True):
@@ -166,21 +167,21 @@ if __name__ == '__main__':
     # get the start time
     st = time.time()
 
-    config = case('CH4:1.',                     #fuel compo
+    config = case('CH30H:1.',                     #fuel compo
                   'O2:1. N2:3.76',              #ox compo
                   'CO2:1.',                     #egr compo
                   [0.8,0.9,1.0,1.1,1.2],        #phi range
-                  [0.0,0.1],                    #egr range
+                  [0.0],                    #egr range
                   'mole',                       #egr rate unit
-                  'gri30.cti'                   #scheme
+                  'CRECK_new.cti'                   #scheme
                  )
     dfs=[]
-    pressures = [100000,500000] #Pa
+    pressures = [10_000_000] #Pa
     for p in pressures:
         #set reservoirs thermo-state
-        config.res.fuel = create_reservoir(config.compo.fuel,config.scheme, 300.0, p)
-        config.res.ox = create_reservoir(config.compo.ox,'air.xml', 300.0, p)
-        config.res.egr = create_reservoir(config.compo.egr,config.scheme, 300.0, p)
+        config.res.fuel = create_reservoir(config.compo.fuel,config.scheme, 600.0, p)
+        config.res.ox = create_reservoir(config.compo.ox,'air.xml', 600.0, p)
+        config.res.egr = create_reservoir(config.compo.egr,config.scheme, 600.0, p)
 
         reactor,pdresult = compute_solutions_0D(config,real_egr=False)
         

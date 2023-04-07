@@ -1,48 +1,68 @@
-from lib_egr import *
+from lib_egr_260 import *
 import time
 import pandas as pd
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 if __name__ == '__main__':
+    path = os.getcwd()
+    print('Current folder: ',path)
+    print(f"Running Cantera version: {ct.__version__}")
+    print(f"Running Matplotlib version: {matplotlib.__version__}")
+
     # get the start time
     st = time.time()
 
     config = case('CH4:1.',                     #fuel compo
+                  [300],                    #tin fuel
+                  [1e5,5e5],                        #pin fuel
                   'O2:1. N2:3.76',              #ox compo
+                  [300],                    #tin ox
+                  [1e5,5e5],                        #pin ox
                   'CO2:1.',                     #egr compo
-                  [0.8,0.9,1.0,1.1,1.2],         #phi range
-                  [0.0,0.1],                     #egr range
-                  'mole'                         #egr rate unit
+                  [300],                    #tin egr
+                  [1e5,5e5],                        #pin egr
+                  [i for i in np.arange(0.8,1.21,0.05)],        #phi range
+                  [0.5,0.7],            #egr range
+                  'mole',                       #egr rate unit
+                  'schemes/Aramco13.cti'                   #scheme
                  )
-    dfs=[]
-    pressures = [100000,500000] #Pa
-    for p in pressures:
-        #set reservoirs thermo-state
-        config.res.fuel = create_reservoir(config.compo.fuel,'gri30.cti', 300.0, p)
-        config.res.ox = create_reservoir(config.compo.ox,'air.xml', 300.0, p)
-        config.res.egr = create_reservoir(config.compo.egr,'gri30.cti', 300.0, p)
-
-        reactor,pdresult = compute_solutions_0D(config,real_egr=False)
-        
-        dfs.append(pdresult)
     
-    print(dfs)
+    Tins = [[t[i] for t in config.tin] for i in range(len(config.tin.fuel))]
+    Pins = [[p[i] for p in config.pin] for i in range(len(config.pin.fuel))]
 
-    # get the end time
-    et = time.time()
+    items = [[config,phi,Tin,Pin] for phi in config.phi_range for Tin in Tins for Pin in Pins]
+    #print(items)
+
+    ncpu = mp.cpu_count()
+    print('nCPU :',ncpu)
+    print('nItems :',len(items))
+
+    #Progress bar declaration
+    pbar=tqdm(total=len(items)*len(config.egr_range),file=sys.stdout) 
+    def update(*a):
+        pbar.update()
+
+    if(True):
+        previous_rate = 0.3
+        for egr in config.egr_range:
+            #Computation pool 
+            pool = mp.Pool(min(len(items),ncpu))
+            results = [pool.apply_async(compute_solutions_1D, args=item+[egr,previous_rate], callback=update) for item in items]
+            pool.close()
+            # wait for all tasks to complete and processes to close
+            pool.join()
+            previous_rate = egr
+            #get results & store them in csv
+            unpacked=[res.get() for res in results]
+            output=pd.concat(unpacked,axis=0)
+            output.to_csv(path+'/plan_partiel_dilution_'+str(round(egr,1))+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+
+            print(output)
+
+    
     # get the execution time
+    et = time.time()
     elapsed_time = et - st
 
-        
-    #select the columns to plot (X,Xbis,Y)    
-    dfsc=[df.pivot_table(index='phi',columns='EGR',values='T') for df in dfs]
-    dfsc=pd.concat(dfsc, axis = 1, keys = pressures)
-    
-    print(dfsc)
     print('Execution time:', elapsed_time, 'seconds')
-
-    title='(0D) Flame temperature vs equivalence ratio (Tin_EGR:'+str(config.res.egr.thermo.T)+'K)'
-    human_labels = [str(round(p/100000,1))+' bar, '+str(round(e*100,1))+"%EGR"+config.egr_unit for p in pressures for e in config.egr_range]
-    xlabel='Equivalence ratio'
-    ylabel='Tad [K]'
-
-    show_graphs(dfsc,title,human_labels,xlabel,ylabel)
