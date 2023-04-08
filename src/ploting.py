@@ -11,10 +11,11 @@ print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
-    'plan_partiel_dilution_0.0_20230406-120038.csv',
-    'plan_partiel_dilution_0.1_20230406-131614.csv',
-    'plan_partiel_dilution_0.3_20230406-201540.csv',
-    'plan_partiel_dilution_0.5_20230407-121510.csv',
+    'plan_partiel_0D_dilution_20230408-194012.csv'
+    # 'plan_partiel_dilution_0.0_20230406-120038.csv',
+    # 'plan_partiel_dilution_0.1_20230406-131614.csv',
+    # 'plan_partiel_dilution_0.3_20230406-201540.csv',
+    # 'plan_partiel_dilution_0.5_20230407-121510.csv',
 ]
 files=[path+'/results/'+file for file in files]
 
@@ -23,9 +24,15 @@ papier=pd.read_csv(path+'/results/'+'data-papier.csv',delimiter=';').round({'P':
 
 #print(input)
 
-var_to_plot=['T','u']
-ylabels = ('Tad[K]','u[m.s-1]',)
-titles = ['Flame temperature', 'Laminar flame velocity',]
+var_to_plot=['T',
+            # 'u'
+            ]
+ylabels = ('Tad[K]',
+           # 'u[m.s-1]',
+          )
+titles = ['Flame temperature',
+          #'Laminar flame velocity',
+         ]
 
 
 for idx,var in enumerate(var_to_plot):
@@ -53,13 +60,13 @@ for idx,var in enumerate(var_to_plot):
 
         #create a string label for each P and EGR in df3 with format '%EGR: ; P:'
         #Create a string label based on df3 columns and names
-        labels = ['%s: %s; P: %s' % (mydata.columns.names[1], x[1], x[0]) for x in mydata.columns]
+        labels = ['%CO2:{}%;{}:{}bar'.format(round(x[1]*100,0), mydata.columns.names[1] ,round(x[0]/100000,0)) for x in mydata.columns]
 
         
         
         #print(df3.columns.names)
 
-        title='(1D) '+titles[idx]+' vs equivalence ratio (Tin_CO2:'+str(300)+'K)'
+        title='(0D) '+titles[idx]+' vs equivalence ratio (Tin_CO2:'+str(300)+'K)'
         human_labels = labels
         xlabel='Phi'
         ylabel=ylabels[idx]
@@ -71,7 +78,7 @@ for idx,var in enumerate(var_to_plot):
         ax.legend(human_labels,loc='best')
         plt.tight_layout()
         #plt.show()
-        plt.savefig(path+'/img/'+var+str(i)+'.png', dpi=300, bbox_inches='tight')
+        plt.savefig(path+'/img/'+var+str(i)+'_0D.png', dpi=300, bbox_inches='tight')
         #plt.close()
 
     #show_graphs(mydata,title,human_labels,xlabel,ylabel,subplot=1,plot=False,save=False,path=path+'/img/')
