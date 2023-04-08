@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *.code-workspace
 combustor.py
+ipynb_chekpoints/
+*.xml
+*.csv
+CRECK_new.cti
+alcool.cti
+
 # C extensions
 *.so
 
