@@ -4,8 +4,6 @@ __pycache__/
 *.code-workspace
 combustor.py
 ipynb_chekpoints/
-*.xml
-*.csv
 CRECK_new.cti
 alcool.cti
 
