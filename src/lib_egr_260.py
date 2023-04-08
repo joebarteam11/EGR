@@ -443,8 +443,9 @@ def show_graphs(df,title=None,labels=None,xlabel=None,ylabel=None,style='-o',sub
         df.plot(ax=ax,style=style,title=title,xlabel=xlabel,ylabel=ylabel)
     else:
         df.plot(ax=ax,style=style,title=title)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
+        
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
 
     if(plot):
         plt.grid()
@@ -454,8 +455,8 @@ def show_graphs(df,title=None,labels=None,xlabel=None,ylabel=None,style='-o',sub
     if(save):
         print('Saving plot')
         plt.savefig(path+ylabel+'_f('+xlabel+').png', dpi=300, bbox_inches='tight')
-    else:
-        plt.show(block=True)
+    #else:
+    plt.show(block=True)
 
     return ax
 
@@ -463,7 +464,6 @@ if __name__ == '__main__':
     path = os.getcwd()
     print('Current folder: ',path)
     print(f"Running Cantera version: {ct.__version__}")
-    print(f"Running Matplotlib version: {matplotlib.__version__}")
 
     # get the start time
     st = time.time()
