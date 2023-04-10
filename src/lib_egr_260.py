@@ -138,6 +138,7 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
         raise ValueError('egr_unit must be mass, mole or vol')
     
 def create_reservoir(content, scheme, T, P):
+    warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     gas = ct.Solution(scheme)
     gas.TPX = T, P, content
     return ct.Reservoir(gas), gas
@@ -264,26 +265,38 @@ def build_freeflame(mix,width=0.03):
     flame = ct.FreeFlame(mix, width=width)
     return flame
 
-def mixer(phi,config,egr):
+def mixer(phi,config,egr,real_egr=False):
     gas=ct.Solution(config.scheme)
-    moldots,moldot_tot = compute_mdots(config, egr, phi,return_unit='mass')
+    mdots,mdot_tot = compute_mdots(config, egr, phi,return_unit='mass')
 
     fuel = ct.Quantity(gas,constant='HP')
     fuel.TPX = config.gas.fuel.T,config.gas.fuel.P,config.compo.fuel
-    fuel.mass = moldots[0]/moldot_tot
+    fuel.mass = mdots[0]/mdot_tot
     ox = ct.Quantity(gas,constant='HP')
     ox.TPX = config.gas.ox.T,config.gas.ox.P,config.compo.ox
-    ox.mass = moldots[1]/moldot_tot
-    egr = ct.Quantity(gas,constant='HP')
-    egr.TPX = config.gas.egr.T,config.gas.egr.P,config.compo.egr
-    egr.mass = moldots[2]/moldot_tot
+    ox.mass = mdots[1]/mdot_tot
+    
+    if(real_egr):
+        dilutent = ct.Quantity(config.gas.egr,constant='HP')
+        dilutent.TP = config.gas.egr.T,config.gas.egr.P
+    else:
+        dilutent = ct.Quantity(gas,constant='HP')
+        dilutent.TPX = config.gas.egr.T,config.gas.egr.P,config.compo.egr
+    dilutent.mass = mdots[2]/mdot_tot
 
-    mix = fuel+ox+egr
+    mix = fuel+ox+dilutent
     #print(mix.report())
     return mix.T, mix.P, mix.X
 
-def compute_solutions_1D(config,phi,tin,pin,egr,previous_rate,real_egr=False,vars=['EGR','phi','P','Tin','T','u'],species = ['CH4','H2','O2','CO','CO2','H2O']):
-    
+def apply_egr_to_inlet(f,config,phi,egr):
+    config.gas.egr.X = f.X[:,-1]
+    _,_,X = mixer(phi,config,egr,real_egr=True)
+    f.inlet.X = X
+    return f
+
+def compute_solutions_1D(config,phi,tin,pin,egr,restart_rate,real_egr=False,vars=['EGR','phi','P','Tin','T','u'],species = ['CH4','H2','O2','CO','CO2','H2O']):
+    path = os.getcwd()+'/src'
+
     #create the gas object containing the mixture of fuel, ox and egr and all thermo data
     _, config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme,tin[0], pin[0])
     _, config.gas.ox = create_reservoir(config.compo.ox,'air.xml', tin[1], pin[1])
@@ -295,37 +308,43 @@ def compute_solutions_1D(config,phi,tin,pin,egr,previous_rate,real_egr=False,var
     df =  pd.DataFrame(columns=vartosave)
 
     #get the temperature and pressure of the mixture according to phi and egr rate
-    T,P,X = mixer(phi, config,egr)
+    T,P,X = mixer(phi, config, egr)
     f = build_freeflame(fresh_gas(phi,config,egr,T,P))
 
-    tol_ss = [1.0e-7, 1.0e-8]  # tolerance [rtol atol] for steady-state problem
-    tol_ts = [1.0e-7, 1.0e-8]  # tolerance [rtol atol] for time stepping
+    tol_ss = [2.e-9, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
+    tol_ts = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for time stepping
 
     f.flame.set_steady_tolerances(default=tol_ss)
     f.flame.set_transient_tolerances(default=tol_ts)
-    
+    f.transport_model = 'Mix'
     #print('flame X_CH4',f.inlet.thermo['CH4'].X)
     #print(('%10s %10s %10s %10s %10s %10s' % ('phi','Xfuel', 'Xair', 'Xegr', 'T', 'P'))) 
     #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
     flametitle=''
-    if(previous_rate is None):
-        flametitle = 'data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
+    if(restart_rate is None):
+        flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
         f.set_initial_guess()
     else:
-        flametitle = 'data/'+'egr'+str(round(previous_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
+        flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
         try:
             f.restore(flametitle)
         except:
             raise Exception('Cannot restore flame from file '+flametitle)
-        flametitle = 'data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
+        flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
 
+    # print(f.X[:,-1])
+    # config.gas.egr.X = f.X[:,-1]
+    # _,_,X = mixer(phi,config,egr,real_egr=True)
+    # print('Inlet composition',X)
 
     f.inlet.T = T
     f.P = P
     f.inlet.X = X
+    #print('Inlet composition',f.inlet.X)
+    flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr)
 
-    flame = solve_flame(f,flametitle)
-    
+
+
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
         SL0=f.velocity[0]
     else:
@@ -336,12 +355,13 @@ def compute_solutions_1D(config,phi,tin,pin,egr,previous_rate,real_egr=False,var
 
     return df
 
-def solve_flame(f,flametitle):
+def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
+    warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     #################################################################
     # Iterations start here
     #################################################################
     verbose = 1
-    loglevel  = 1                       # amount of diagnostic output (0 to 5)	    
+    loglevel  = 0                       # amount of diagnostic output (0 to 5)	    
     refine_grid = True                  # True to enable refinement, False to disable 	
     f.max_time_step_count=1000
     f.max_grid_points=500
@@ -361,7 +381,13 @@ def solve_flame(f,flametitle):
     if(verbose>0):
         print('1st iteration...')
     try:
+        if(verbose>1):
+            print('Inlet composition before f.solve',f.inlet.X)
         f.solve(loglevel, refine_grid)
+        if(real_egr):
+            f = apply_egr_to_inlet(f,config,phi,egr)
+            if(verbose>0):
+                print('EGR applied to inlet')
         #f.save(flametitle)
     except FlameExtinguished:
         print('Flame extinguished')
@@ -379,7 +405,13 @@ def solve_flame(f,flametitle):
     if(verbose>0):
         print('2nd iteration...')
     try:
+        if(verbose>1):
+            print('Inlet composition before f.solve',f.inlet.X)
         f.solve(loglevel, refine_grid)
+        if(real_egr):
+            f = apply_egr_to_inlet(f,config,phi,egr)
+            if(verbose>0):
+                print('EGR applied to inlet')
         #f.save(flametitle)
     except FlameExtinguished:
         print('Flame extinguished')
@@ -395,7 +427,13 @@ def solve_flame(f,flametitle):
     if(verbose>0):
         print('3rd iteration...')
     try:
+        if(verbose>1):
+            print('Inlet composition before f.solve',f.inlet.X)
         f.solve(loglevel, refine_grid)
+        if(real_egr):
+            f = apply_egr_to_inlet(f,config,phi,egr)
+            if(verbose>0):
+                print('EGR applied to inlet')
         #f.save(flametitle)
     except FlameExtinguished:
         print('Flame extinguished')
@@ -411,7 +449,13 @@ def solve_flame(f,flametitle):
     if(verbose>0):
         print('4th iteration...')
     try:
+        if(verbose>1):
+            print('Inlet composition before f.solve',f.inlet.X)
         f.solve(loglevel, refine_grid)
+        if(real_egr):
+            f = apply_egr_to_inlet(f,config,phi,egr)
+            if(verbose>0):
+                print('EGR applied to inlet')
         f.save(flametitle)
     except FlameExtinguished:
         print('Flame extinguished')
@@ -427,7 +471,13 @@ def solve_flame(f,flametitle):
     if(verbose>0):
         print('5th iteration...')
     try:
+        if(verbose>1):
+            print('Inlet composition before f.solve',f.inlet.X)
         f.solve(loglevel, refine_grid)
+        if(real_egr):
+            f = apply_egr_to_inlet(f,config,phi,egr)
+            if(verbose>0):
+                print('EGR applied to inlet')
         f.save(flametitle)
     except FlameExtinguished:
         print('Flame extinguished')
@@ -435,14 +485,48 @@ def solve_flame(f,flametitle):
     except ct.CanteraError as e:
         print('Error occurred while solving:', e)
     # # Sixth iteration
-    # #################
-    # # Mesh refinement
-    # f.set_refine_criteria(ratio = 5.0, slope = 0.02, curve = 0.02, prune = 0.01)
-    # # Calculation
-    # if(verbose>0):
-    #     print('6th iteration...')
-    # f.solve(loglevel, refine_grid)
-    # f.save(flametitle)
+    #################
+    #NO Mesh refinement
+    #f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
+    # Calculation
+    if(verbose>0):
+        print('6th iteration...')
+    try:
+        if(verbose>1):
+            print('Inlet composition before f.solve',f.inlet.X)
+        f.solve(loglevel, refine_grid=False)
+        if(real_egr):
+            f = apply_egr_to_inlet(f,config,phi,egr)
+            if(verbose>0):
+                print('EGR applied to inlet')
+        f.save(flametitle)
+    except FlameExtinguished:
+        print('Flame extinguished')
+        
+    except ct.CanteraError as e:
+        print('Error occurred while solving:', e)
+    
+    # # Seventh iteration
+    #################
+    #NO Mesh refinement
+    #f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
+    # Calculation
+    if(verbose>0):
+        print('7th iteration...')
+    try:
+        if(verbose>1):
+            print('Inlet composition before f.solve',f.inlet.X)
+        f.solve(loglevel, refine_grid=False)
+        if(real_egr):
+            f = apply_egr_to_inlet(f,config,phi,egr)
+            if(verbose>0):
+                print('EGR applied to inlet')
+        f.save(flametitle)
+    except FlameExtinguished:
+        print('Flame extinguished')
+        
+    except ct.CanteraError as e:
+        print('Error occurred while solving:', e)
     
     return f
 
@@ -481,19 +565,19 @@ if __name__ == '__main__':
 
     config = case('CH4:1.',                     #fuel compo
                   [300],                    #tin fuel
-                  [1e5,5e5],                        #pin fuel
+                  [1e5],                        #pin fuel
                   'O2:1. N2:3.76',              #ox compo
                   [300],                    #tin ox
-                  [1e5,5e5],                        #pin ox
+                  [1e5],                        #pin ox
                   'CO2:1.',                     #egr compo
                   [300],                    #tin egr
-                  [1e5,5e5],                        #pin egr
-                  [i for i in np.arange(0.8,1.21,0.05)],        #phi range
-                  [0.5,0.7],            #egr range
+                  [1e5],                        #pin egr
+                  [1.0],#[i for i in np.arange(0.8,1.21,0.05)],        #phi range
+                  [0.1],            #egr range
                   'mole',                       #egr rate unit
                   'schemes/Aramco13.cti'                   #scheme
                  )
-    warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
+    
 
     Tins = [[t[i] for t in config.tin] for i in range(len(config.tin.fuel))]
     Pins = [[p[i] for p in config.pin] for i in range(len(config.pin.fuel))]
@@ -530,16 +614,16 @@ if __name__ == '__main__':
         print(dfs)
 
     elif(dim=='1D'):
-
-        previous_rate = 0.0 #set to None if want to compute from the first egr value in egr_range
+        real_egr = True
+        restart_rate = None#config.egr_range[0] #set to None if want to compute from the first egr value in egr_range
         for egr in config.egr_range:
             #Computation pool 
             pool = mp.Pool(min(len(items),ncpu))
-            results = [pool.apply_async(compute_solutions_1D, args=item+[egr,previous_rate], callback=update) for item in items]
+            results = [pool.apply_async(compute_solutions_1D, args=item+[egr,restart_rate,real_egr], callback=update) for item in items]
             pool.close()
             # wait for all tasks to complete and processes to close
             pool.join()
-            previous_rate = egr
+            restart_rate = egr
             #get results & store them in csv
             unpacked=[res.get() for res in results]
             output=pd.concat(unpacked,axis=0)
