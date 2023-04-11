@@ -11,7 +11,7 @@ print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
-    'plan_partiel_0D_dilution_20230408-194012.csv'
+    'all_data_with_flamthick.csv'
     # 'plan_partiel_dilution_0.0_20230406-120038.csv',
     # 'plan_partiel_dilution_0.1_20230406-131614.csv',
     # 'plan_partiel_dilution_0.3_20230406-201540.csv',
@@ -24,13 +24,13 @@ papier=pd.read_csv(path+'/results/'+'data-papier.csv',delimiter=';').round({'P':
 
 #print(input)
 
-var_to_plot=['T',
+var_to_plot=['dF',
             # 'u'
             ]
-ylabels = ('Tad[K]',
+ylabels = ('Flame Thickness [m]',
            # 'u[m.s-1]',
           )
-titles = ['Flame temperature',
+titles = ['Flame thickness',
           #'Laminar flame velocity',
          ]
 
@@ -40,23 +40,23 @@ for idx,var in enumerate(var_to_plot):
     
     for i in range(2):
         mydata=inputs.pivot_table(index='phi',columns=['P','EGR',],values=var)
-        paper=papier.pivot_table(index='phi',columns=['P','EGR',],values=var)
+        #paper=papier.pivot_table(index='phi',columns=['P','EGR',],values=var)
 
         #get only P > 200000 in df2 and df
         if(i==0):
             mydata=mydata.loc[:,mydata.columns.get_level_values('P')>200000]
-            paper=paper.loc[:,paper.columns.get_level_values('P')>200000]
+            #paper=paper.loc[:,paper.columns.get_level_values('P')>200000]
 
             #get only EGR < 0.7 in df3 and df1
             mydata=mydata.loc[:,mydata.columns.get_level_values('EGR')<0.7]
-            paper=paper.loc[:,paper.columns.get_level_values('EGR')<0.7]
+            #paper=paper.loc[:,paper.columns.get_level_values('EGR')<0.7]
         else:
             mydata=mydata.loc[:,mydata.columns.get_level_values('P')<200000]
-            paper=paper.loc[:,paper.columns.get_level_values('P')<200000]
+            #paper=paper.loc[:,paper.columns.get_level_values('P')<200000]
 
             #get only EGR < 0.7 in df3 and df1
             mydata=mydata.loc[:,mydata.columns.get_level_values('EGR')<0.7]
-            paper=paper.loc[:,paper.columns.get_level_values('EGR')<0.7]
+            #paper=paper.loc[:,paper.columns.get_level_values('EGR')<0.7]
 
         #create a string label for each P and EGR in df3 with format '%EGR: ; P:'
         #Create a string label based on df3 columns and names
@@ -66,14 +66,14 @@ for idx,var in enumerate(var_to_plot):
         
         #print(df3.columns.names)
 
-        title='(0D) '+titles[idx]+' vs equivalence ratio (Tin_CO2:'+str(300)+'K)'
+        title='(1D) '+titles[idx]+' vs equivalence ratio (Tin_CO2:'+str(300)+'K)'
         human_labels = labels
         xlabel='Phi'
         ylabel=ylabels[idx]
 
         _,ax = plt.subplots(1,1,figsize=(10,10))
         mydata.plot(ax=ax,style='.-',title=title,legend=False)
-        paper.plot(ax=ax,style='x',title=title,legend=False)
+        #paper.plot(ax=ax,style='x',title=title,legend=False)
         plt.grid()
         ax.legend(human_labels,loc='best')
         plt.tight_layout()
