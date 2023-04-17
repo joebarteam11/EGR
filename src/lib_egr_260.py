@@ -310,8 +310,12 @@ def flamme_thickness(f):
     #print('Thicknes (m)',thickness)
     return thickness
 
-def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['EGR','phi','P','Tin','T','u','dF'],species = ['CH4','H2','O2','CO','CO2','H2O']):
+def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['EGR','phi','P','Tin','T','u','dF'],species = ['CH4','O2','CO2','H2O']):
     path = os.getcwd()+'/src'
+    dfs=[]
+    vartosave = vars+species
+    df =  pd.DataFrame(columns=vartosave)
+
     for egr in config.egr_range:
         #create the gas object containing the mixture of fuel, ox and egr and all thermo data
         _, config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme,tin[0], pin[0])
@@ -320,15 +324,15 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['E
 
         #create a dataframe naming colums with 'phi', 'T' and all the species in the list
         #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
-        vartosave = vars+species
-        df =  pd.DataFrame(columns=vartosave)
+        #vartosave = vars+species
+        #df =  pd.DataFrame(columns=vartosave)
 
         #get the temperature and pressure of the mixture according to phi and egr rate
         T,P,X = mixer(phi, config, egr)
         f = build_freeflame(fresh_gas(phi,config,egr,T,P))
-
-        tol_ss = [2.e-9, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
-        tol_ts = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for time stepping
+        #print(f.transport_model)
+        tol_ss = [2.0e-7, 1.0e-7]  # tolerance [rtol atol] for steady-state problem
+        tol_ts = [2.0e-7, 1.0e-7]  # tolerance [rtol atol] for time stepping
 
         f.flame.set_steady_tolerances(default=tol_ss)
         f.flame.set_transient_tolerances(default=tol_ts)
@@ -338,16 +342,16 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['E
         #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
         flametitle=''
         if(restart_rate is None):
-            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_gri30.h5'
+            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
             f.set_initial_guess()
         else:
-            flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_gri30.h5'
+            flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
             try:
                 f.read_hdf(flametitle)
                 #f.set_initial_guess(data=flametitle)
             except:
                 raise Exception('Cannot restore flame from file '+flametitle)
-            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_gri30.h5'
+            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
 
         # print(f.X[:,-1])
         # config.gas.egr.X = f.X[:,-1]
@@ -371,6 +375,7 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['E
 
         index = [f.gas.species_index(specie) for specie in species]
         df = pd.concat([df, pd.DataFrame([[egr, phi, P, T, f.T[-1],SL0,flamme_thickness(f)]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+        #dfs = pd.concat([df],axis=0)
         try:
             update()
         except:
@@ -383,9 +388,9 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     # Iterations start here
     #################################################################
     verbose = 1
-    loglevel  = 0                       # amount of diagnostic output (0 to 5)	    
+    loglevel  = 1                       # amount of diagnostic output (0 to 5)	    
     refine_grid = True                  # True to enable refinement, False to disable 	
-    f.max_time_step_count=100000
+    f.max_time_step_count=50000
     f.max_grid_points=500
     
     # first iteration
@@ -397,7 +402,7 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     # Max number of times the Jacobian will be used before it must be re-evaluated
     f.set_max_jac_age(50, 50)
     #Set time steps whenever Newton convergence fails
-    f.set_time_step(5e-08, [25, 40, 80, 140, 200, 350]) #s
+    f.set_time_step(1e-06, [25, 40, 80, 140, 200, 350, 500, 700, 1000, 1300, 1700, 2000, 3000, 5000, 10000, 12000, 15000,]) #s
 
     # Calculation
     if(verbose>0):
@@ -422,7 +427,7 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     # Energy equation activated
     f.energy_enabled = True
     # mesh refinement
-    f.set_refine_criteria(ratio = 5.0, slope = 0.7, curve = 0.7)
+    f.set_refine_criteria(ratio = 7.5, slope = 0.75, curve = 0.75)
     # Calculation
     if(verbose>0):
         print('2nd iteration...')
@@ -601,8 +606,8 @@ if __name__ == '__main__':
                   'CO2:1.',                     #egr compo
                   [300],                    #tin egr
                   [1e5,5e5],                        #pin egr
-                  [i for i in np.arange(0.8,1.21,0.05)],        #phi range
-                  [0.0,0.1,0.3],            #egr range
+                  [i for i in np.arange(0.80,1.22,0.05)],        #phi range
+                  [0.0,0.1,0.3,0.5],            #egr range
                   'mole',                       #egr rate unit
                   'schemes/BFER_methane.cti'                   #scheme
                  )
@@ -619,7 +624,7 @@ if __name__ == '__main__':
     print('nItems :',len(items))
 
     #Progress bar declaration
-    pbar=tqdm(total=len(items)*len(config.egr_range),file=sys.stdout) 
+    pbar=tqdm(total=len(items),file=sys.stdout) 
     def update(*a):
         pbar.update()
 
@@ -648,7 +653,7 @@ if __name__ == '__main__':
         #for phi in config.phi_range:
             #Computation pool 
         pool = mp.Pool(min(len(items),ncpu))
-        results = [pool.apply_async(compute_solutions_1D, args=item+[restart_rate,real_egr]) for item in items]
+        results = [pool.apply_async(compute_solutions_1D, args=item+[restart_rate,real_egr],callback=update) for item in items]
         pool.close()
         # wait for all tasks to complete and processes to close
         pool.join()
@@ -656,7 +661,7 @@ if __name__ == '__main__':
         #get results & store them in csv
         unpacked=[res.get() for res in results]
         output=pd.concat(unpacked,axis=0)
-        output.to_csv(path+'/plan_total_dilution_gri30'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        output.to_csv(path+'/plan_total_dilution_BFERMix'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
 
         print(output)
 
