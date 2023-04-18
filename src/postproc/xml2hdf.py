@@ -4,6 +4,10 @@ from packaging import version
 import pandas as pd 
 from lib_egr_260 import flamme_thickness
 
+#create h5 restore files from xml and save them in the subfolder 'data'
+#also create a csv for plotting script
+
+
 path=os.getcwd()+"/src/data/"
 vars=['EGR','phi','P','Tin','T','u','dF']
 species = ['CH4','H2','O2','CO','CO2','H2O']

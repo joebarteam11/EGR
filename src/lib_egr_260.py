@@ -17,7 +17,7 @@ class FlameExtinguished(Exception):
     pass
 
 class case:
-    def __init__(self,fuel,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,egr_range,egr_unit,scheme):
+    def __init__(self,fuel,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,egr_range,egr_unit,scheme,isARC):
         self.compo = self.Compo(fuel,ox,egr)
         self.res = self.Reservoirs()
         self.gas = self.Gas(fuel,ox,egr)
@@ -41,6 +41,7 @@ class case:
         self.egr_range = egr_range
         self.egr_unit = egr_unit
         self.scheme = scheme
+        self.isARC = [True if x == 'ARC' else False for x in isARC]
 
     class Gas:
         def __init__(self,fuel,ox,egr):
@@ -139,11 +140,17 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
     
 def create_reservoir(content, scheme, T, P):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
+    if(config.isARC):
+        #remove extension from sheme variable
+        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     gas = ct.Solution(scheme)
     gas.TPX = T, P, content
     return ct.Reservoir(gas), gas
 
 def burned_gas(phi,config,egr_rate,ignition=True):
+    if(config.isARC):
+        #remove extension from sheme variable
+        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     gas = ct.Solution(config.scheme)
     gas.TP = config.gas.ox.T,config.gas.ox.P
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
@@ -248,6 +255,9 @@ def compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','
     return reactor, df
 
 def fresh_gas(phi,config,egr_rate,Tmix,Pmix):
+    if(config.isARC):
+        #remove extension from sheme variable
+        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     gas = ct.Solution(config.scheme)
     gas.TP = Tmix,Pmix
 
@@ -266,6 +276,9 @@ def build_freeflame(mix,width=0.03):
     return flame
 
 def mixer(phi,config,egr,real_egr=False):
+    if(config.isARC):
+        #remove extension from sheme variable
+        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     gas=ct.Solution(config.scheme)
     mdots,mdot_tot = compute_mdots(config, egr, phi,return_unit='mass')
 
@@ -609,7 +622,8 @@ if __name__ == '__main__':
                   [i for i in np.arange(0.80,1.22,0.05)],        #phi range
                   [0.0,0.1,0.3,0.5],            #egr range
                   'mole',                       #egr rate unit
-                  'schemes/BFER_methane.cti'                   #scheme
+                  'schemes/Lu_ARC.cti',               #scheme
+                  'ARC' 
                  )
     
 
@@ -661,7 +675,7 @@ if __name__ == '__main__':
         #get results & store them in csv
         unpacked=[res.get() for res in results]
         output=pd.concat(unpacked,axis=0)
-        output.to_csv(path+'/plan_total_dilution_BFERMix'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        output.to_csv(path+'/plan_total_LuARC_canavbp'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
 
         print(output)
 
