@@ -17,7 +17,7 @@ class FlameExtinguished(Exception):
     pass
 
 class case:
-    def __init__(self,fuel,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,egr_range,egr_unit,scheme):
+    def __init__(self,fuel,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,egr_range,egr_unit,scheme,isARC):
         self.compo = self.Compo(fuel,ox,egr)
         self.res = self.Reservoirs()
         self.gas = self.Gas(fuel,ox,egr)
@@ -41,6 +41,7 @@ class case:
         self.egr_range = egr_range
         self.egr_unit = egr_unit
         self.scheme = scheme
+        self.isARC = [True if x == 'ARC' else False for x in isARC]
 
     class Gas:
         def __init__(self,fuel,ox,egr):
@@ -139,11 +140,17 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
     
 def create_reservoir(content, scheme, T, P):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
+    if(config.isARC):
+        #remove extension from sheme variable
+        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     gas = ct.Solution(scheme)
     gas.TPX = T, P, content
     return ct.Reservoir(gas), gas
 
 def burned_gas(phi,config,egr_rate,ignition=True):
+    if(config.isARC):
+        #remove extension from sheme variable
+        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     gas = ct.Solution(config.scheme)
     gas.TP = config.gas.ox.T,config.gas.ox.P
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
@@ -248,6 +255,9 @@ def compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','
     return reactor, df
 
 def fresh_gas(phi,config,egr_rate,Tmix,Pmix):
+    if(config.isARC):
+        #remove extension from sheme variable
+        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     gas = ct.Solution(config.scheme)
     gas.TP = Tmix,Pmix
 
@@ -266,6 +276,9 @@ def build_freeflame(mix,width=0.03):
     return flame
 
 def mixer(phi,config,egr,real_egr=False):
+    if(config.isARC):
+        #remove extension from sheme variable
+        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     gas=ct.Solution(config.scheme)
     mdots,mdot_tot = compute_mdots(config, egr, phi,return_unit='mass')
 
@@ -294,65 +307,92 @@ def apply_egr_to_inlet(f,config,phi,egr):
     f.inlet.X = X
     return f
 
-def compute_solutions_1D(config,phi,tin,pin,egr,restart_rate,real_egr=False,vars=['EGR','phi','P','Tin','T','u'],species = ['CH4','H2','O2','CO','CO2','H2O']):
+def flamme_thickness(f):
+    #get the temperature profile
+    T=f.T
+    #get the grid
+    X=f.grid
+    #get the temperature at the flame base
+    T0=T[0]
+    #get the temperature at the flame tip
+    T1=T[-1]
+    #compute the maximal spatial temperature gradient along the flame
+    dTdx=np.max(np.gradient(T,X))
+    #compute the thickness
+    thickness=(T1-T0)/dTdx
+    #print('Thicknes (m)',thickness)
+    return thickness
+
+def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['EGR','phi','P','Tin','T','u','dF'],species = ['CH4','O2','CO2','H2O']):
     path = os.getcwd()+'/src'
-
-    #create the gas object containing the mixture of fuel, ox and egr and all thermo data
-    _, config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme,tin[0], pin[0])
-    _, config.gas.ox = create_reservoir(config.compo.ox,'air.xml', tin[1], pin[1])
-    _, config.gas.egr = create_reservoir(config.compo.egr,config.scheme, tin[2], pin[2])
-
-    #create a dataframe naming colums with 'phi', 'T' and all the species in the list
-    #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
+    dfs=[]
     vartosave = vars+species
     df =  pd.DataFrame(columns=vartosave)
 
-    #get the temperature and pressure of the mixture according to phi and egr rate
-    T,P,X = mixer(phi, config, egr)
-    f = build_freeflame(fresh_gas(phi,config,egr,T,P))
+    for egr in config.egr_range:
+        #create the gas object containing the mixture of fuel, ox and egr and all thermo data
+        _, config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme,tin[0], pin[0])
+        _, config.gas.ox = create_reservoir(config.compo.ox,'air.xml', tin[1], pin[1])
+        _, config.gas.egr = create_reservoir(config.compo.egr,config.scheme, tin[2], pin[2])
 
-    tol_ss = [2.e-9, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
-    tol_ts = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for time stepping
+        #create a dataframe naming colums with 'phi', 'T' and all the species in the list
+        #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
+        #vartosave = vars+species
+        #df =  pd.DataFrame(columns=vartosave)
 
-    f.flame.set_steady_tolerances(default=tol_ss)
-    f.flame.set_transient_tolerances(default=tol_ts)
-    f.transport_model = 'Mix'
-    #print('flame X_CH4',f.inlet.thermo['CH4'].X)
-    #print(('%10s %10s %10s %10s %10s %10s' % ('phi','Xfuel', 'Xair', 'Xegr', 'T', 'P'))) 
-    #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
-    flametitle=''
-    if(restart_rate is None):
-        flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
-        f.set_initial_guess()
-    else:
-        flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
+        #get the temperature and pressure of the mixture according to phi and egr rate
+        T,P,X = mixer(phi, config, egr)
+        f = build_freeflame(fresh_gas(phi,config,egr,T,P))
+        #print(f.transport_model)
+        tol_ss = [2.0e-7, 1.0e-7]  # tolerance [rtol atol] for steady-state problem
+        tol_ts = [2.0e-7, 1.0e-7]  # tolerance [rtol atol] for time stepping
+
+        f.flame.set_steady_tolerances(default=tol_ss)
+        f.flame.set_transient_tolerances(default=tol_ts)
+        f.transport_model = 'Mix'
+        #print('flame X_CH4',f.inlet.thermo['CH4'].X)
+        #print(('%10s %10s %10s %10s %10s %10s' % ('phi','Xfuel', 'Xair', 'Xegr', 'T', 'P'))) 
+        #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
+        flametitle=''
+        if(restart_rate is None):
+            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
+            f.set_initial_guess()
+        else:
+            flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
+            try:
+                f.read_hdf(flametitle)
+                #f.set_initial_guess(data=flametitle)
+            except:
+                raise Exception('Cannot restore flame from file '+flametitle)
+            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
+
+        # print(f.X[:,-1])
+        # config.gas.egr.X = f.X[:,-1]
+        # _,_,X = mixer(phi,config,egr,real_egr=True)
+        # print('Inlet composition',X)
+        if(real_egr):
+            f = apply_egr_to_inlet(f,config,phi,egr)
+        else:
+            f.inlet.T = T
+            f.P = P
+            f.inlet.X = X
+        #print('Inlet composition',f.inlet.X)
+        flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr)
+
+
+        #restart_rate = egr
+        if(version.parse(ct.__version__) >= version.parse('2.5.0')):
+            SL0=f.velocity[0]
+        else:
+            SL0=f.u[0]
+
+        index = [f.gas.species_index(specie) for specie in species]
+        df = pd.concat([df, pd.DataFrame([[egr, phi, P, T, f.T[-1],SL0,flamme_thickness(f)]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+        #dfs = pd.concat([df],axis=0)
         try:
-            f.restore(flametitle)
+            update()
         except:
-            raise Exception('Cannot restore flame from file '+flametitle)
-        flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'.xml'
-
-    # print(f.X[:,-1])
-    # config.gas.egr.X = f.X[:,-1]
-    # _,_,X = mixer(phi,config,egr,real_egr=True)
-    # print('Inlet composition',X)
-
-    f.inlet.T = T
-    f.P = P
-    f.inlet.X = X
-    #print('Inlet composition',f.inlet.X)
-    flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr)
-
-
-
-    if(version.parse(ct.__version__) >= version.parse('2.5.0')):
-        SL0=f.velocity[0]
-    else:
-        SL0=f.u[0]
-
-    index = [f.gas.species_index(specie) for specie in species]
-    df = pd.concat([df, pd.DataFrame([[egr, phi, P, T, f.T[-1],SL0]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
-
+            print('Cannot update progress bar')
     return df
 
 def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
@@ -361,9 +401,9 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     # Iterations start here
     #################################################################
     verbose = 1
-    loglevel  = 0                       # amount of diagnostic output (0 to 5)	    
+    loglevel  = 1                       # amount of diagnostic output (0 to 5)	    
     refine_grid = True                  # True to enable refinement, False to disable 	
-    f.max_time_step_count=1000
+    f.max_time_step_count=50000
     f.max_grid_points=500
     
     # first iteration
@@ -375,7 +415,7 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     # Max number of times the Jacobian will be used before it must be re-evaluated
     f.set_max_jac_age(50, 50)
     #Set time steps whenever Newton convergence fails
-    f.set_time_step(5e-08, [25, 40, 80, 140, 200, 350]) #s
+    f.set_time_step(1e-06, [25, 40, 80, 140, 200, 350, 500, 700, 1000, 1300, 1700, 2000, 3000, 5000, 10000, 12000, 15000,]) #s
 
     # Calculation
     if(verbose>0):
@@ -400,7 +440,7 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     # Energy equation activated
     f.energy_enabled = True
     # mesh refinement
-    f.set_refine_criteria(ratio = 5.0, slope = 0.7, curve = 0.7)
+    f.set_refine_criteria(ratio = 7.5, slope = 0.75, curve = 0.75)
     # Calculation
     if(verbose>0):
         print('2nd iteration...')
@@ -456,7 +496,7 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
             f = apply_egr_to_inlet(f,config,phi,egr)
             if(verbose>0):
                 print('EGR applied to inlet')
-        f.save(flametitle)
+        #f.save(flametitle)
     except FlameExtinguished:
         print('Flame extinguished')
         
@@ -478,7 +518,10 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
             f = apply_egr_to_inlet(f,config,phi,egr)
             if(verbose>0):
                 print('EGR applied to inlet')
-        f.save(flametitle)
+        try:
+            f.write_hdf(flametitle)
+        except:
+            f.save(flametitle[:-3]+'.yaml')
     except FlameExtinguished:
         print('Flame extinguished')
         
@@ -499,7 +542,7 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
             f = apply_egr_to_inlet(f,config,phi,egr)
             if(verbose>0):
                 print('EGR applied to inlet')
-        f.save(flametitle)
+        #f.save(flametitle)
     except FlameExtinguished:
         print('Flame extinguished')
         
@@ -521,7 +564,11 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
             f = apply_egr_to_inlet(f,config,phi,egr)
             if(verbose>0):
                 print('EGR applied to inlet')
-        f.save(flametitle)
+        #f.save(flametitle)
+        try:
+            f.write_hdf(flametitle)
+        except:
+            f.save(flametitle[:-3]+'.yaml')
     except FlameExtinguished:
         print('Flame extinguished')
         
@@ -565,17 +612,18 @@ if __name__ == '__main__':
 
     config = case('CH4:1.',                     #fuel compo
                   [300],                    #tin fuel
-                  [1e5],                        #pin fuel
+                  [1e5,5e5],                        #pin fuel
                   'O2:1. N2:3.76',              #ox compo
                   [300],                    #tin ox
-                  [1e5],                        #pin ox
+                  [1e5,5e5],                        #pin ox
                   'CO2:1.',                     #egr compo
                   [300],                    #tin egr
-                  [1e5],                        #pin egr
-                  [1.0],#[i for i in np.arange(0.8,1.21,0.05)],        #phi range
-                  [0.1],            #egr range
+                  [1e5,5e5],                        #pin egr
+                  [i for i in np.arange(0.80,1.22,0.05)],        #phi range
+                  [0.0,0.1,0.3,0.5],            #egr range
                   'mole',                       #egr rate unit
-                  'schemes/Aramco13.cti'                   #scheme
+                  'schemes/Lu_ARC.cti',               #scheme
+                  'ARC' 
                  )
     
 
@@ -590,7 +638,7 @@ if __name__ == '__main__':
     print('nItems :',len(items))
 
     #Progress bar declaration
-    pbar=tqdm(total=len(items)*len(config.egr_range),file=sys.stdout) 
+    pbar=tqdm(total=len(items),file=sys.stdout) 
     def update(*a):
         pbar.update()
 
@@ -614,22 +662,22 @@ if __name__ == '__main__':
         print(dfs)
 
     elif(dim=='1D'):
-        real_egr = True
-        restart_rate = None#config.egr_range[0] #set to None if want to compute from the first egr value in egr_range
-        for egr in config.egr_range:
+        real_egr = False
+        restart_rate = None # config.egr_range[0] #set to None if want to compute from the first egr value in egr_range
+        #for phi in config.phi_range:
             #Computation pool 
-            pool = mp.Pool(min(len(items),ncpu))
-            results = [pool.apply_async(compute_solutions_1D, args=item+[egr,restart_rate,real_egr], callback=update) for item in items]
-            pool.close()
-            # wait for all tasks to complete and processes to close
-            pool.join()
-            restart_rate = egr
-            #get results & store them in csv
-            unpacked=[res.get() for res in results]
-            output=pd.concat(unpacked,axis=0)
-            output.to_csv(path+'/plan_partiel_dilution_'+str(round(egr,1))+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        pool = mp.Pool(min(len(items),ncpu))
+        results = [pool.apply_async(compute_solutions_1D, args=item+[restart_rate,real_egr],callback=update) for item in items]
+        pool.close()
+        # wait for all tasks to complete and processes to close
+        pool.join()
+        
+        #get results & store them in csv
+        unpacked=[res.get() for res in results]
+        output=pd.concat(unpacked,axis=0)
+        output.to_csv(path+'/plan_total_LuARC_canavbp'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
 
-            print(output)
+        print(output)
 
     
     # get the execution time

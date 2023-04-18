@@ -6,7 +6,10 @@ combustor.py
 ipynb_chekpoints/
 CRECK_new.cti
 alcool.cti
-*.csv
+ssb*
+*.xml
+log_*
+
 # C extensions
 *.so
 

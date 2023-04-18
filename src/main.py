@@ -8,7 +8,6 @@ if __name__ == '__main__':
     path = os.getcwd()
     print('Current folder: ',path)
     print(f"Running Cantera version: {ct.__version__}")
-    print(f"Running Matplotlib version: {matplotlib.__version__}")
 
     # get the start time
     st = time.time()
@@ -22,12 +21,14 @@ if __name__ == '__main__':
                   'CO2:1.',                     #egr compo
                   [300],                    #tin egr
                   [1e5,5e5],                        #pin egr
-                  [i for i in np.arange(0.8,1.21,0.05)],        #phi range
-                  [0.5,0.7],            #egr range
+                  [i for i in np.arange(0.80,1.22,0.05)],        #phi range
+                  [0.0,0.1,0.3,0.5],            #egr range
                   'mole',                       #egr rate unit
-                  'schemes/Aramco13.cti'                   #scheme
+                  'schemes/Lu_ARC.cti',               #scheme
+                  'ARC'  #is an ARC chemistry ? 'ARC' = yes, other = no
                  )
     
+
     Tins = [[t[i] for t in config.tin] for i in range(len(config.tin.fuel))]
     Pins = [[p[i] for p in config.pin] for i in range(len(config.pin.fuel))]
 
@@ -39,26 +40,46 @@ if __name__ == '__main__':
     print('nItems :',len(items))
 
     #Progress bar declaration
-    pbar=tqdm(total=len(items)*len(config.egr_range),file=sys.stdout) 
+    pbar=tqdm(total=len(items),file=sys.stdout) 
     def update(*a):
         pbar.update()
 
-    if(True):
-        previous_rate = 0.3
-        for egr in config.egr_range:
-            #Computation pool 
-            pool = mp.Pool(min(len(items),ncpu))
-            results = [pool.apply_async(compute_solutions_1D, args=item+[egr,previous_rate], callback=update) for item in items]
-            pool.close()
-            # wait for all tasks to complete and processes to close
-            pool.join()
-            previous_rate = egr
-            #get results & store them in csv
-            unpacked=[res.get() for res in results]
-            output=pd.concat(unpacked,axis=0)
-            output.to_csv(path+'/plan_partiel_dilution_'+str(round(egr,1))+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+    dim='1D'
 
-            print(output)
+    if(dim=='0D'):
+
+        dfs=[]
+        for p in Pins:
+            #set reservoirs thermo-state
+            config.res.fuel,config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme, 300.0, p[0])
+            config.res.ox,config.gas.ox = create_reservoir(config.compo.ox,'air.xml', 300.0, p[1])
+            config.res.egr,config.gas.egr = create_reservoir(config.compo.egr,config.scheme, 300.0, p[2])
+
+            reactor,pdresult = compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O'])
+            
+            dfs.append(pdresult)
+
+        dfs=pd.concat(dfs,axis=0)
+        dfs.to_csv(path+'/results'+'/plan_partiel_0D_dilution_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        print(dfs)
+
+    elif(dim=='1D'):
+        real_egr = False
+        restart_rate = None # config.egr_range[0] #set to None if want to restart computation from the first egr value in egr_range
+       
+        #Computation pool 
+        pool = mp.Pool(min(len(items),ncpu))
+        results = [pool.apply_async(compute_solutions_1D, args=item+[restart_rate,real_egr],callback=update) for item in items]
+        pool.close()
+        # wait for all tasks to complete and processes to close
+        pool.join()
+        
+        #get results & store them in csv
+        unpacked=[res.get() for res in results]
+        output=pd.concat(unpacked,axis=0)
+        output.to_csv(path+'/plan_total_LuARC_canavbp'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+
+        print(output)
 
     
     # get the execution time
