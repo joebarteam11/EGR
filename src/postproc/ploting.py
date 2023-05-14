@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib 
 
-sys.path.append(os.getcwd())
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 path = os.getcwd()
 
 from lib_egr_260 import show_graphs
@@ -21,7 +21,7 @@ files=[
 files=[path+'/results/'+file for file in files]
 
 inputs=pd.concat([pd.read_csv(file).round({'P':1,'EGR':1,'phi':2}) for file in files])
-papier=pd.read_csv(path+'/results/'+'plan_total_dilution_BFERMix_20230417-193939.csv',delimiter=',').round({
+papier=pd.read_csv(path+'/results/'+'plan_total_QC_22_ARC_canavbp_20230419-145236.csv',delimiter=',').round({
                                                                                 'P':1,
                                                                                 'EGR':1,
                                                                                 'phi':2,
@@ -42,7 +42,7 @@ titles = ['Flame thickness',
           'Adiabatic flame temperature',
          ]
 
-mech=['Aramco1.3','BFER']
+mech=['Aramco1.3','ARC (QC)']
 colors=['b','r','g','k','m','c','y']
 for idx,var in enumerate(var_to_plot):
 
@@ -55,7 +55,7 @@ for idx,var in enumerate(var_to_plot):
             pass
 
         #get only P > 200000 in df2 and df
-        if(True):
+        if(i==0):
             mydata=mydata.loc[:,mydata.columns.get_level_values('P')>200000]
             try:
                 paper=paper.loc[:,paper.columns.get_level_values('P')>200000]
@@ -90,14 +90,19 @@ for idx,var in enumerate(var_to_plot):
         #print(df3.columns.names)
 
         title='(1D) '+titles[idx]+' vs equivalence ratio ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'
-        human_labels = labels+['same but with BFER']
+        human_labels = labels+['same but with ARC (QC22)']
         xlabel='Phi'
         ylabel=ylabels[idx]
 
         fs=20
 
         _,ax = plt.subplots(1,1,figsize=(10,10))
-        #mydata = mydata*1000000
+        if(var=='dF'):
+            mydata = mydata*1000000
+            try:
+                paper = paper*1000000
+            except:
+                pass
         mydata.plot(ax=ax,style='o-',legend=False,color=colors[:len(mydata.columns)])
         try:
             paper.plot(ax=ax,style='x--',legend=False,color=colors[:len(mydata.columns)],markersize=10)
@@ -117,7 +122,7 @@ for idx,var in enumerate(var_to_plot):
         #ax.legend('[1]')
         plt.tight_layout()
         #plt.show()
-        plt.savefig(path+'/img/'+var+str(i)+'_1D_BFERMix_detailled.png', dpi=300, bbox_inches='tight')
+        plt.savefig(path+'/img/'+var+str(i)+'_1D_ARC_QC_detailled.png', dpi=300, bbox_inches='tight')
         #plt.close()
 
     #show_graphs(mydata,title,human_labels,xlabel,ylabel,subplot=1,plot=False,save=False,path=path+'/img/')

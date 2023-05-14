@@ -13,19 +13,19 @@ if __name__ == '__main__':
     st = time.time()
 
     config = case('CH4:1.',                     #fuel compo
-                  [300],                    #tin fuel
-                  [1e5,5e5],                        #pin fuel
+                  [1400],                    #tin fuel
+                  [10e5,18e5],                        #pin fuel
                   'O2:1. N2:3.76',              #ox compo
-                  [300],                    #tin ox
-                  [1e5,5e5],                        #pin ox
+                  [1400],                    #tin ox
+                  [10e5,18e5],                        #pin ox
                   'CO2:1.',                     #egr compo
-                  [300],                    #tin egr
-                  [1e5,5e5],                        #pin egr
-                  [i for i in np.arange(0.80,1.22,0.05)],        #phi range
+                  [1400],                    #tin egr
+                  [10e5,18e5],                        #pin egr
+                  [0],#[i for i in np.arange(0.80,1.22,0.05)],        #phi range
                   [0.0,0.1,0.3,0.5],            #egr range
                   'mole',                       #egr rate unit
-                  'schemes/Lu_ARC.cti',               #scheme
-                  'ARC'  #is an ARC chemistry ? 'ARC' = yes, other = no
+                  'gri30.cti',               #scheme
+                  'NA'  #is an ARC chemistry ? 'ARC' = yes, other = no
                  )
     
 
@@ -44,23 +44,23 @@ if __name__ == '__main__':
     def update(*a):
         pbar.update()
 
-    dim='1D'
+    dim='0D'
 
     if(dim=='0D'):
 
         dfs=[]
         for p in Pins:
             #set reservoirs thermo-state
-            config.res.fuel,config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme, 300.0, p[0])
-            config.res.ox,config.gas.ox = create_reservoir(config.compo.ox,'air.xml', 300.0, p[1])
-            config.res.egr,config.gas.egr = create_reservoir(config.compo.egr,config.scheme, 300.0, p[2])
+            config.res.fuel,config.gas.fuel = create_reservoir(config,config.compo.fuel, 1673, p[0])
+            config.res.ox,config.gas.ox = create_reservoir(config,config.compo.ox, 1673, p[1],scheme='air.xml')
+            config.res.egr,config.gas.egr = create_reservoir(config,config.compo.egr, 1673, p[2])
 
             reactor,pdresult = compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O'])
             
             dfs.append(pdresult)
 
         dfs=pd.concat(dfs,axis=0)
-        dfs.to_csv(path+'/results'+'/plan_partiel_0D_dilution_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        dfs.to_csv(path+'/results'+'/plan_partiel_0D_dilutionKP_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
         print(dfs)
 
     elif(dim=='1D'):

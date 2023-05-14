@@ -41,7 +41,7 @@ class case:
         self.egr_range = egr_range
         self.egr_unit = egr_unit
         self.scheme = scheme
-        self.isARC = [True if x == 'ARC' else False for x in isARC]
+        self.isARC = True if isARC == 'ARC' else False
 
     class Gas:
         def __init__(self,fuel,ox,egr):
@@ -97,7 +97,7 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
     if(config.egr_unit=='mass'):
         fuel_mass=phi/(Sy+phi)
         air_mass=1-fuel_mass
-        egr_mass=(egr_rate/(1-egr_rate))*(fuel_mass) #+air_mass depending on the definition you want
+        egr_mass=(egr_rate/(1-egr_rate))*(air_mass) #+fuel_mass depending on the definition you want
         mdots=[fuel_mass*coef, air_mass*coef, egr_mass*coef]
         
         if(return_unit=='mass'):
@@ -110,7 +110,7 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
     elif(config.egr_unit=='mole'):
         fuel_mol = phi/(n_mole_ox*Sx+phi)
         air_mol = 1-fuel_mol
-        egr_mol=(egr_rate/(1-egr_rate))*(fuel_mol) #+air_mol depending on the definition you want
+        egr_mol=(egr_rate/(1-egr_rate))*(air_mol) #+fuel_mol depending on the definition you want
         mdots=[fuel_mol*coef*mw_fuel, air_mol*coef*mw_oxidizer, egr_mol*coef*mw_egr]
         
         if(return_unit=='mass'):
@@ -125,7 +125,7 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
         fuel_mol = phi/(n_mole_ox*Sx+phi)
         fuel_vol = fuel_mol * config.gas.fuel.volume_mole
         air_vol = (1-fuel_mol) * config.gas.ox.volume_mole
-        egr_vol=(egr_rate/(1-egr_rate))*(fuel_vol) #+air_vol depending on the definition you want
+        egr_vol=(egr_rate/(1-egr_rate))*(air_vol) #+fuel_vol depending on the definition you want
         mdots=[fuel_vol*coef*config.gas.fuel.density_mass, air_vol*coef*config.gas.ox.density_mass, egr_vol*coef*config.gas.egr.density_mass]
         
         if(return_unit=='mass'):
@@ -138,11 +138,13 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'):
     else:
         raise ValueError('egr_unit must be mass, mole or vol')
     
-def create_reservoir(content, scheme, T, P):
+def create_reservoir(config,content, T, P,scheme=None):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     if(config.isARC):
         #remove extension from sheme variable
         ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
+    if(scheme is None):
+        scheme = config.scheme
     gas = ct.Solution(scheme)
     gas.TPX = T, P, content
     return ct.Reservoir(gas), gas
@@ -234,9 +236,9 @@ def compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','
         for phi in config.phi_range:
             mfcs, reactor = reactor_0D(phi,config,egr,real_egr)
             #only with cantera >= 2.5
-            moldot_tot = mfcs[0].mass_flow_rate/(config.gas.fuel.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.gas.ox.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.gas.egr.mean_molecular_weight/1000)
-            #print(('%10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, (mfcs[2].mass_flow_rate/mdot_tot), reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
             if(version.parse(ct.__version__) >= version.parse("2.4.0")):
+                moldot_tot = mfcs[0].mass_flow_rate/(config.gas.fuel.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.gas.ox.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.gas.egr.mean_molecular_weight/1000)
+                #print(('%10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, (mfcs[2].mass_flow_rate/mdot_tot), reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
                 print((' %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, #reactor.thermo['CH4'].X, reactor.thermo['O2'].X+reactor.thermo['N2'].X, reactor.thermo['CO2'].X,
                                                                     #only with cantera >= 2.5
                                                                     (mfcs[0].mass_flow_rate/(config.gas.fuel.mean_molecular_weight/1000))/moldot_tot,
@@ -331,9 +333,9 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['E
 
     for egr in config.egr_range:
         #create the gas object containing the mixture of fuel, ox and egr and all thermo data
-        _, config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme,tin[0], pin[0])
-        _, config.gas.ox = create_reservoir(config.compo.ox,'air.xml', tin[1], pin[1])
-        _, config.gas.egr = create_reservoir(config.compo.egr,config.scheme, tin[2], pin[2])
+        _, config.gas.fuel = create_reservoir(config,config.compo.fuel,tin[0], pin[0])
+        _, config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
+        _, config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
 
         #create a dataframe naming colums with 'phi', 'T' and all the species in the list
         #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
@@ -355,16 +357,16 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['E
         #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
         flametitle=''
         if(restart_rate is None):
-            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
+            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
             f.set_initial_guess()
         else:
-            flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
+            flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
             try:
                 f.read_hdf(flametitle)
                 #f.set_initial_guess(data=flametitle)
             except:
                 raise Exception('Cannot restore flame from file '+flametitle)
-            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_BFERMix.h5'
+            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
 
         # print(f.X[:,-1])
         # config.gas.egr.X = f.X[:,-1]
@@ -401,9 +403,9 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     # Iterations start here
     #################################################################
     verbose = 1
-    loglevel  = 1                       # amount of diagnostic output (0 to 5)	    
+    loglevel  = 0                      # amount of diagnostic output (0 to 5)	    
     refine_grid = True                  # True to enable refinement, False to disable 	
-    f.max_time_step_count=50000
+    f.max_time_step_count=25000
     f.max_grid_points=500
     
     # first iteration
@@ -415,7 +417,7 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     # Max number of times the Jacobian will be used before it must be re-evaluated
     f.set_max_jac_age(50, 50)
     #Set time steps whenever Newton convergence fails
-    f.set_time_step(1e-06, [25, 40, 80, 140, 200, 350, 500, 700, 1000, 1300, 1700, 2000, 3000, 5000, 10000, 12000, 15000,]) #s
+    f.set_time_step(1e-06, [25, 40, 80, 140, 200, 350, 500, 700, 1000, 1300, 1700, 2000, 3000, 5000, 10000, 12000, 15000, 20000]) #s
 
     # Calculation
     if(verbose>0):
@@ -611,19 +613,19 @@ if __name__ == '__main__':
     st = time.time()
 
     config = case('CH4:1.',                     #fuel compo
-                  [300],                    #tin fuel
+                  [300,500],                    #tin fuel
                   [1e5,5e5],                        #pin fuel
                   'O2:1. N2:3.76',              #ox compo
-                  [300],                    #tin ox
+                  [300,500],                    #tin ox
                   [1e5,5e5],                        #pin ox
                   'CO2:1.',                     #egr compo
-                  [300],                    #tin egr
+                  [300,500],                    #tin egr
                   [1e5,5e5],                        #pin egr
                   [i for i in np.arange(0.80,1.22,0.05)],        #phi range
                   [0.0,0.1,0.3,0.5],            #egr range
                   'mole',                       #egr rate unit
-                  'schemes/Lu_ARC.cti',               #scheme
-                  'ARC' 
+                  'schemes/CH4_16_250_10_QC.cti',               #scheme
+                  'ARC', 
                  )
     
 
@@ -649,9 +651,9 @@ if __name__ == '__main__':
         dfs=[]
         for p in Pins:
             #set reservoirs thermo-state
-            config.res.fuel,config.gas.fuel = create_reservoir(config.compo.fuel,config.scheme, 300.0, p[0])
-            config.res.ox,config.gas.ox = create_reservoir(config.compo.ox,'air.xml', 300.0, p[1])
-            config.res.egr,config.gas.egr = create_reservoir(config.compo.egr,config.scheme, 300.0, p[2])
+            config.res.fuel,config.gas.fuel = create_reservoir(config,config.compo.fuel, 300.0, p[0])
+            config.res.ox,config.gas.ox = create_reservoir(config,config.compo.ox, 300.0, p[1],scheme='air.xml')
+            config.res.egr,config.gas.egr = create_reservoir(config,config.compo.egr, 300.0, p[2])
 
             reactor,pdresult = compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O'])
             
@@ -675,7 +677,7 @@ if __name__ == '__main__':
         #get results & store them in csv
         unpacked=[res.get() for res in results]
         output=pd.concat(unpacked,axis=0)
-        output.to_csv(path+'/plan_total_LuARC_canavbp'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        output.to_csv(path+'/plan_total_QC_16_ARC_canavbp'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
 
         print(output)
 

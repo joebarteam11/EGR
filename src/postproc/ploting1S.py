@@ -6,7 +6,7 @@ import matplotlib
 sys.path.append(os.getcwd())
 path = os.getcwd()
 
-from lib_egr_260 import show_graphs
+#from lib_egr_260 import show_graphs
 print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 
@@ -21,7 +21,7 @@ files=[
 files=[path+'/results/'+file for file in files]
 
 inputs=pd.concat([pd.read_csv(file).round({'P':1,'EGR':1,'phi':2}) for file in files])
-papier=pd.read_csv(path+'/results/'+'plan_total_LuARC_canavbp_20230418-003028.csv',delimiter=',').round({
+papier=pd.read_csv(path+'/results/'+'plan_total_dilution_BFERUNITY_20230417-183743.csv',delimiter=',').round({
                                                                                 'P':1,
                                                                                 'EGR':1,
                                                                                 'phi':2,
@@ -29,17 +29,20 @@ papier=pd.read_csv(path+'/results/'+'plan_total_LuARC_canavbp_20230418-003028.cs
 #papier=pd.read_csv(path+'/plan_total_dilution_BFERUNITY_20230412-170317.csv').round({'P':1,'EGR':1,'phi':2})
 #print(input)
 
-var_to_plot=['dF',
+var_to_plot=[#'dF',
              #'u',
              #'T',
+             'HRR',
             ]
-ylabels = ('Flame Thickness [um]',
+ylabels = (#'Flame Thickness [um]',
             #'SL0[m.s-1]',
             #'T[K]',
+            'HRR [W.m-3]',
           )
-titles = ['Flame thickness',
+titles = [#'Flame thickness',
           #'Laminar flame speed',
           #'Adiabatic flame temperature',
+          'Heat release rate',
          ]
 
 mech=['Aramco1.3','2step - BFER']
@@ -54,7 +57,7 @@ for idx,var in enumerate(var_to_plot):
             pass
 
         #get only P > 200000 in df2 and df
-        if(True):
+        if(False):
             mydata=mydata.loc[:,mydata.columns.get_level_values('P')>200000]
             try:
                 paper=paper.loc[:,paper.columns.get_level_values('P')>200000]
@@ -89,17 +92,19 @@ for idx,var in enumerate(var_to_plot):
         #print(df3.columns.names)
 
         title='(1D) '+titles[idx]+' vs equivalence ratio ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'
-        human_labels = labels+['same but with Lu(ARC)']
+        human_labels = labels+['same but with BFER']
         xlabel='Phi'
         ylabel=ylabels[idx]
 
         fs=20
 
         _,ax = plt.subplots(1,1,figsize=(10,10))
-        mydata = mydata*1000000
+        if(var=='dF'):
+            mydata = mydata*1000000
         mydata.plot(ax=ax,style='o-',legend=False,color=colors[:len(mydata.columns)])
         try:
-            paper = paper*1000000
+            if(var=='dF'):
+                paper = paper*1000000
             paper.plot(ax=ax,style='x--',legend=False,color=colors[:len(mydata.columns)],markersize=10)
         except:
             pass
@@ -117,7 +122,7 @@ for idx,var in enumerate(var_to_plot):
         #ax.legend('[1]')
         plt.tight_layout()
         #plt.show()
-        plt.savefig(path+'/img/'+var+str(i)+'_1D_LuARC_detailled.png', dpi=300, bbox_inches='tight')
+        plt.savefig(path+'/img/'+var+str(i)+'_1D_BFERUNITY_detailled.png', dpi=300, bbox_inches='tight')
         #plt.close()
 
     #show_graphs(mydata,title,human_labels,xlabel,ylabel,subplot=1,plot=False,save=False,path=path+'/img/')
