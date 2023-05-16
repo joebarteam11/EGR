@@ -11,20 +11,20 @@ if __name__ == '__main__':
 
     # get the start time
     st = time.time()
-
+    temptlist = [i for i in np.arange(1003,1800,50)]
     config = case('CH4:1.',                     #fuel compo
-                  [1400],                    #tin fuel
+                  temptlist,                    #tin fuel
                   [10e5,18e5],                        #pin fuel
                   'O2:1. N2:3.76',              #ox compo
-                  [1400],                    #tin ox
+                  temptlist,                    #tin ox
                   [10e5,18e5],                        #pin ox
                   'CO2:1.',                     #egr compo
-                  [1400],                    #tin egr
+                  temptlist,                    #tin egr
                   [10e5,18e5],                        #pin egr
                   [0],#[i for i in np.arange(0.80,1.22,0.05)],        #phi range
-                  [0.0,0.1,0.3,0.5],            #egr range
+                  [0.05,0.1,0.15,0.2,0.3,0.5],            #egr range
                   'mole',                       #egr rate unit
-                  'gri30.cti',               #scheme
+                  'schemes/Aramco13.cti',               #scheme
                   'NA'  #is an ARC chemistry ? 'ARC' = yes, other = no
                  )
     
@@ -44,24 +44,42 @@ if __name__ == '__main__':
     def update(*a):
         pbar.update()
 
-    dim='0D'
+    dim='equilibrate'
 
-    if(dim=='0D'):
+    if(dim=='equilibrate'):
+        species = ['O2','CO','CO2']
 
-        dfs=[]
-        for p in Pins:
-            #set reservoirs thermo-state
-            config.res.fuel,config.gas.fuel = create_reservoir(config,config.compo.fuel, 1673, p[0])
-            config.res.ox,config.gas.ox = create_reservoir(config,config.compo.ox, 1673, p[1],scheme='air.xml')
-            config.res.egr,config.gas.egr = create_reservoir(config,config.compo.egr, 1673, p[2])
+        #Computation pool 
+        pool = mp.Pool(min(len(items),ncpu))
+        results = [pool.apply_async(compute_equilibrium, args=item+[species],callback=update) for item in items]
+        pool.close()
+        # wait for all tasks to complete and processes to close
+        pool.join()
+        
+        #get results & store them in csv
+        unpacked=[res.get() for res in results]
+        output=pd.concat(unpacked,axis=0)
+        output.to_csv(path+'/results'+'/plan_total_equilibrium'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
 
-            reactor,pdresult = compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O'])
-            
+        print(output)
+
+    elif(dim=='0D'):
+        #reactor,pdresult = compute_solutions_0D(config,phi,Tin,Pin,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O'])
+        real_egr = False
+        species = ['O2','CO','CO2']
+        dfs = []
+        for item in items:
+            reactor,pdresult = compute_solutions_0D(*item,real_egr,species)
             dfs.append(pdresult)
+            try:
+                update()
+            except:
+                pass
+        
+        output=pd.concat(dfs,axis=0)
 
-        dfs=pd.concat(dfs,axis=0)
-        dfs.to_csv(path+'/results'+'/plan_partiel_0D_dilutionKP_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
-        print(dfs)
+        output.to_csv(path+'/results'+'/plan_partiel_0D_dilutionKP_BFER_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        print(output)
 
     elif(dim=='1D'):
         real_egr = False

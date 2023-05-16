@@ -204,8 +204,8 @@ def reactor_0D(phi,config,egr_rate,real_egr,steady_state_only=True):
     else:
         mfcs = init_reservoirs_mdots(reservoirs,mdots,reactor)## ajouter la detection du nombre de reservoir dans la config
     
-    sim.rtol = 1e-11
-    sim.atol = 1e-11
+    sim.rtol = 1e-7
+    sim.atol = 1e-8
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
         sim.max_steps = 100000 
 
@@ -225,7 +225,29 @@ def reactor_0D(phi,config,egr_rate,real_egr,steady_state_only=True):
 
     return mfcs, reactor
 
-def compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O']):
+def compute_equilibrium(config,phi,tin,pin,species = ['CH4','H2','O2','CO','CO2','H2O']):
+    #create a dataframe naming colums with 'phi', 'T' and all the species in the list
+    #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
+    df =  pd.DataFrame(columns=['EGR','phi','T','P']+species)
+    
+    for egr in config.egr_range:
+        for phi in config.phi_range:
+            _,config.gas.fuel = create_reservoir(config,config.compo.fuel, tin[0], pin[0])
+            _,config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
+            _,config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
+            
+            bg = burned_gas(phi,config,egr,ignition=True)
+            
+            df = pd.concat([df, pd.DataFrame([[egr, phi, bg.T, bg.P]+list(bg[species].X)], columns=['EGR','phi','T','P']+species)]).astype(float)
+            try:
+                update()
+            except:
+                pass
+
+    return df
+
+
+def compute_solutions_0D(config,phi,tin,pin,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O']):
     #create a dataframe naming colums with 'phi', 'T' and all the species in the list
     #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
     df =  pd.DataFrame(columns=['EGR','phi','T','P']+species)
@@ -234,6 +256,10 @@ def compute_solutions_0D(config,real_egr=False,species = ['CH4','H2','O2','CO','
 
     for egr in config.egr_range:
         for phi in config.phi_range:
+            config.res.fuel,config.gas.fuel = create_reservoir(config,config.compo.fuel, tin[0], pin[0])
+            config.res.ox,config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
+            config.res.egr,config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
+            
             mfcs, reactor = reactor_0D(phi,config,egr,real_egr)
             #only with cantera >= 2.5
             if(version.parse(ct.__version__) >= version.parse("2.4.0")):
