@@ -1,4 +1,4 @@
-from lib_egr_260 import *
+from lib_egr_260 import * #(compute_equilibrium,compute_solutions_0D,compute_solutions_1D)
 import time
 import pandas as pd
 
@@ -22,9 +22,9 @@ if __name__ == '__main__':
                   temptlist,                    #tin egr
                   [10e5,18e5],                        #pin egr
                   [0],#[i for i in np.arange(0.80,1.22,0.05)],        #phi range
-                  [0.05,0.1,0.15,0.2,0.3,0.5],            #egr range
+                  [0.1,0.15,0.2],            #egr range
                   'mole',                       #egr rate unit
-                  'schemes/Aramco13.cti',               #scheme
+                  'gri30.cti',               #scheme
                   'NA'  #is an ARC chemistry ? 'ARC' = yes, other = no
                  )
     
@@ -67,6 +67,7 @@ if __name__ == '__main__':
         #reactor,pdresult = compute_solutions_0D(config,phi,Tin,Pin,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O'])
         real_egr = False
         species = ['O2','CO','CO2']
+        res_time = 0.1
         dfs = []
         for item in items:
             reactor,pdresult = compute_solutions_0D(*item,real_egr,species)
@@ -77,7 +78,6 @@ if __name__ == '__main__':
                 pass
         
         output=pd.concat(dfs,axis=0)
-
         output.to_csv(path+'/results'+'/plan_partiel_0D_dilutionKP_BFER_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
         print(output)
 

@@ -211,19 +211,17 @@ def reactor_0D(phi,config,egr_rate,real_egr,steady_state_only=True):
 
     #compute steady state
     if(steady_state_only):
-        sim.advance_to_steady_state()#only with cantera >= 2.5
-    # else:
-    #     residence_time = 1  # starting residence time
-    #     while reactor.T > 500:
-    #         sim.set_initial_time(0.0)  # reset the integrator
-    #         sim.advance_to_steady_state()
-    #         print('tres = {:.2e}; T = {:.1f}'.format(residence_time, reactor.T))
-    #         #states.append(reactor.thermo.state, tres=residence_time)
-    #         residence_time *= 0.9  # decrease the residence time for the next iteration
-    #sim.set_initial_time(0.0)
-    #sim.advance(10000) #large number to ensure that the steady state is reached i.e. gas as travelled enough trough the reactor volume
-
-    return mfcs, reactor
+        sim.advance_to_steady_state() #only with cantera >= 2.5
+        return mfcs, reactor
+    else:
+        residence_time = 1  # starting residence time
+        while reactor.T > 500:
+            sim.set_initial_time(0.0)  # reset the integrator
+            sim.advance(residence_time)
+            print('tres = {:.2e}; T = {:.1f}'.format(residence_time, reactor.T))
+            states.append(reactor.thermo.state, tres=residence_time)
+            residence_time *= 0.9  # decrease the residence time for the next iteration
+            return mfcs, reactor
 
 def compute_equilibrium(config,phi,tin,pin,species = ['CH4','H2','O2','CO','CO2','H2O']):
     #create a dataframe naming colums with 'phi', 'T' and all the species in the list
