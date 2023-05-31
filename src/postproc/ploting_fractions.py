@@ -6,13 +6,13 @@ import matplotlib
 sys.path.append(os.getcwd())
 path = os.getcwd()
 
-from lib_egr_260 import show_graphs
+#from lib_egr_260 import show_graphs
 print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
     #'plan_total_dilution_BFERMIX_20230412-154440.csv',
-    'all_data_with_flamthick.csv',
+    'CRASHTEST_20230530-143539.csv',
     # 'plan_partiel_dilution_0.0_20230406-120038.csv',
     # 'plan_partiel_dilution_0.1_20230406-131614.csv',
     # 'plan_partiel_dilution_0.3_20230406-201540.csv',
@@ -20,7 +20,7 @@ files=[
 ]
 files=[path+'/results/'+file for file in files]
 
-inputs=pd.concat([pd.read_csv(file).round({'P':1,'EGR':1,'phi':2}) for file in files])
+inputs=pd.concat([pd.read_csv(file).round({'P':1,'EGR':1,'phi':2,'Tin':1}) for file in files])
 papier=pd.read_csv(path+'/results/'+'data-handmade.csv',delimiter=';').round({'EGR':1,'phi':2})
 #papier=pd.read_csv(path+'/plan_total_dilution_BFERUNITY_20230412-170317.csv').round({'P':1,'EGR':1,'phi':2})
 #print(input)
@@ -30,7 +30,7 @@ var_to_plot=['dF',
              'T',
             ]
 ylabels = ('Flame Thickness [m]',
-            'SL0[m.s-1]',
+            'SL0[cm.s-1]',
             'T[K]',
           )
 titles = ['Flame thickness',
@@ -38,23 +38,24 @@ titles = ['Flame thickness',
           'Adiabatic flame temperature',
          ]
 
-mech=['Aramco1.3','[1]']
+mech=['SanDiego','[1]']
 colors=['b','r','g','k','m','c','y']
 
 for idx,var in enumerate(var_to_plot):
 
     for i in range(2):
-        mydata=inputs.pivot_table(index='phi',columns=['P','EGR',],values=var)
+        mydata=inputs.pivot_table(index='AF',columns=['Tin','EGR',],values=var)
         try:
-            paper=papier.pivot_table(index='phi',columns=['EGR',],values=var)
+            paper=papier.pivot_table(index='AF',columns=['EGR',],values=var)
         except:
             pass
 
         #get only P > 200000 in df2 and df
+
         if(i==0):
-            mydata=mydata.loc[:,mydata.columns.get_level_values('P')>200000]
+            mydata=mydata.loc[:,mydata.columns.get_level_values('Tin')<400]
             try:
-                paper=paper.loc[:,paper.columns.get_level_values('P')>200000]
+                paper=paper.loc[:,paper.columns.get_level_values('Tin')<400]
             except:
                 pass
 
@@ -65,9 +66,10 @@ for idx,var in enumerate(var_to_plot):
             except:
                 pass
         else:
-            mydata=mydata.loc[:,mydata.columns.get_level_values('P')<200000]
+
+            mydata=mydata.loc[:,mydata.columns.get_level_values('Tin')>400]
             try:
-                paper=paper.loc[:,paper.columns.get_level_values('P')<200000]
+                paper=paper.loc[:,paper.columns.get_level_values('Tin')>400]
             except:
                 pass
             #get only EGR < 0.7 in df3 and df1
@@ -79,20 +81,32 @@ for idx,var in enumerate(var_to_plot):
 
         #create a string label for each P and EGR in df3 with format '%EGR: ; P:'
         #Create a string label based on df3 columns and names
-        labels = ['%CO2:{}%;{}:{}bar {}'.format(round(x[1]*100,0), mydata.columns.names[0] ,round(x[0]/100000,0),mech[0]) for x in mydata.columns]
+        labels = ['%EGR:{}%;{}:{}bar {}'.format(round(x[1]*100,0), mydata.columns.names[0] ,round(x[0]/100000,0),mech[0]) for x in mydata.columns]
 
         
         
         #print(df3.columns.names)
 
-        title='(1D) '+titles[idx]+' vs equivalence ratio ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'
+        title='(0D) '+titles[idx]+' vs equivalence ratio ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'
         human_labels = labels+['hand-made calculations (constant Cp)']
-        xlabel='Phi'
+        xlabel='AF'
         ylabel=ylabels[idx]
 
         fs=20
 
         _,ax = plt.subplots(1,1,figsize=(10,10))
+        if(var=='dF'):
+            mydata = mydata*1000000
+            try:
+                paper = paper*1000000
+            except:
+                pass
+        elif(var=='u'):
+            mydata = mydata*100
+            try:
+                paper = paper*100
+            except:
+                pass
         mydata.plot(ax=ax,style='o-',legend=False,color=colors[:len(mydata.columns)])
         try:
             paper.plot(ax=ax,style='x',legend=False,color=colors[:len(mydata.columns)],markersize=10)
@@ -112,7 +126,7 @@ for idx,var in enumerate(var_to_plot):
         #ax.legend('[1]')
         plt.tight_layout()
         #plt.show()
-        plt.savefig(path+'/img/'+var+str(i)+'_1D_ARAMCO13.png', dpi=300, bbox_inches='tight')
+        plt.savefig(path+'/img/'+var+str(i)+'_H2_0D_GRI30.png', dpi=300, bbox_inches='tight')
         #plt.close()
 
     #show_graphs(mydata,title,human_labels,xlabel,ylabel,subplot=1,plot=False,save=False,path=path+'/img/')

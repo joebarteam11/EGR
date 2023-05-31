@@ -12,7 +12,7 @@ print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
     #'plan_total_dilution_BFERUNITY_20230417-174627.csv',
-    'all_data_with_flamthick.csv',
+    'H2_air_gri30_canavbp_20230530-114812.csv',
     # 'plan_partiel_dilution_0.0_20230406-120038.csv',
     # 'plan_partiel_dilution_0.1_20230406-131614.csv',
     # 'plan_partiel_dilution_0.3_20230406-201540.csv',
@@ -89,7 +89,7 @@ for idx,var in enumerate(var_to_plot):
         
         #print(df3.columns.names)
 
-        title='(1D) '+titles[idx]+' vs equivalence ratio ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'
+        title='(0D) '+titles[idx]+' vs equivalence ratio ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'
         human_labels = labels+['same but with ARC (QC22)']
         xlabel='Phi'
         ylabel=ylabels[idx]
@@ -122,7 +122,7 @@ for idx,var in enumerate(var_to_plot):
         #ax.legend('[1]')
         plt.tight_layout()
         #plt.show()
-        plt.savefig(path+'/img/'+var+str(i)+'_1D_ARC_QC_detailled.png', dpi=300, bbox_inches='tight')
+        plt.savefig(path+'/img/'+var+str(i)+'_0D_ARC_QC_detailled.png', dpi=300, bbox_inches='tight')
         #plt.close()
 
     #show_graphs(mydata,title,human_labels,xlabel,ylabel,subplot=1,plot=False,save=False,path=path+'/img/')

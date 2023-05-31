@@ -16,31 +16,34 @@ files=[
     #'plan_partiel_0D_dilutionKP_20230516-114346.csv',
     #'plan_partiel_0D_dilutionKP_BFER_20230516-132035.csv',
     #'plan_total_equilibrium_20230516-163815.csv',
-    'plan_total_equilibrium_20230516-164522.csv',
+    #'plan_total_equilibrium_20230516-164522.csv',
+    'plan_total_equilibrium_KP_fco2.csv',
 
 ]
 files=[path+'/results/'+file for file in files]
 
 inputs=pd.concat([pd.read_csv(file).round({'P':-1,'EGR':2,'T':-1}) for file in files])
 
-var_to_plot=['CO',
-             'CO2',
+var_to_plot=[#'CO',
+             #'CO2',
+             #'CO',
              'O2',
             ]
-ylabels = (  '$X_{CO}$',
-             '$X_{CO2}$',
+ylabels = (  #'$X_{CO}$',
+             #'$X_{CO2}$',
+             #'$X_{CO}$',
              '$X_{O2}$',
           )
 titles = ['Molar fraction',
-          'Molar fraction',
-          'Molar fraction',
+          #'Molar fraction',
+          #'Molar fraction',
          ]
 
-mech=['Aramco1.3','BFER']
+mech=['Aramco1.3','BFER','GRIMech3.0']
 colors=['b','r','g','k','m','y','c']
 style=['o-','x--']
 
-mydata=inputs.pivot_table(index='T',columns=['P','EGR',],values=var_to_plot)
+mydata=inputs.pivot_table(index='CO2',columns=['P','EGR',],values=var_to_plot)
 #print(mydata.columns.get_level_values('EGR').unique())
 
 for idx,rate in enumerate(mydata.columns.get_level_values('EGR').unique()):
@@ -77,7 +80,7 @@ for idx,rate in enumerate(mydata.columns.get_level_values('EGR').unique()):
     #[ax.yaxis.set_major_formatter(FormatStrFormatter('%.5e')) for ax in axes]
     
     ax1.tick_params(axis='x', **tkw)
-    ax1.set_xlabel('Temperature [K]',fontsize=fs)
+    ax1.set_xlabel('$X_{CO2in}$',fontsize=fs)
     [ax.spines["left"].set_visible(True) for ax in axes[1:]]
     [ax.yaxis.set_label_position('left') for ax in axes[1:]]
     [ax.yaxis.set_ticks_position('left') for ax in axes[1:]]
@@ -86,12 +89,12 @@ for idx,rate in enumerate(mydata.columns.get_level_values('EGR').unique()):
     
     #Legend handling
     labels=['P:{}bar'.format(round(x/100000,0)) for x in tempdata.columns.get_level_values('P').unique()]
-    ax1.legend(labels,loc='best',bbox_to_anchor=(1.1, 1.15),fontsize=fs-2)
+    ax1.legend(labels,loc='center right',bbox_to_anchor=(0.9, 0.5),fontsize=fs-2)
     legs = ax1.get_legend()
     [leg.set_color('black') for leg in legs.legendHandles]
 
     ax1.grid()
     plt.rcParams.update({'font.size': fs-5})
-    plt.title('$X_{CO2in}$'+': {}% - '.format(rate*100)+ mech[0]+' scheme',fontsize=fs)
+    plt.title('$X_{CO2in}$'+': {}% - '.format(rate*100)+ mech[0]+' scheme'+' ('+r"$\bf{"+'T_{in}CO2+Air:'+str(1700)+'K'+ "}$"+')',fontsize=fs)
     #plt.show(block=True)
-    plt.savefig('AIR_CO2_{}_KP_Aramcoeq.png'.format(rate),dpi=300)
+    plt.savefig('AIR_CO2_{}_KP_GRI30.png'.format(1700),dpi=300)
