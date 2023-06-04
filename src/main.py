@@ -23,7 +23,7 @@ if __name__ == '__main__':
                   temptlist,                    #tin egr
                   presslist,                        #pin egr
                   [0],#[i for i in np.arange(0.60,2.51,0.1)],        #phi range
-                  [i for i in np.linspace(0.0,1.0,50)],#[0.0,0.1,0.15,0.2],            #egr range
+                  [i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                   'mole',                       #egr rate unit
                   'schemes/Aramco13.cti',               #scheme
                   'Mix', #transport model
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     def update(*a):
         pbar.update()
 
-    dim='0D'
+    dim='equilibrate'
     #species = ['H2','O2','N2','H2O']
     species = ['O2','CO','CO2']
 
@@ -79,7 +79,10 @@ if __name__ == '__main__':
         #get results & store them in csv
         unpacked=[res.get() for res in results]
         output=pd.concat(unpacked,axis=0)
-        output.to_csv(path+'/results'+'/plan_total_equilibrium'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        output.to_csv(path+'/results'+
+                      '/plan_total_equilibrium_KP_fco2'+
+                      #'_'+time.strftime("%Y%m%d-%H%M%S")+
+                      '.csv',index=False)
 
         print(output)
 

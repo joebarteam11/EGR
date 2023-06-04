@@ -24,15 +24,16 @@ files=[path+'/results/'+file for file in files]
 
 inputs=pd.concat([pd.read_csv(file).round({'P':-1,'EGR':2,'T':-1}) for file in files])
 
-var_to_plot=['CO',
+var_to_plot=['O2',
+             'CO',
              'CO2',
              #'CO',
-             'O2',
+             
             ]
-ylabels = (  '$X_{CO}$',
-             '$X_{CO2}$',
+ylabels = (  '$X_{O2}$',
+             '$X_{CO}$',
              #'$X_{CO}$',
-             '$X_{O2}$',
+             '$X_{CO2}$',
           )
 titles = ['Molar fraction',
           'Molar fraction',
@@ -73,7 +74,7 @@ for idx,rate in enumerate(mydata.columns.get_level_values('EGR').unique()):
     [ax.yaxis.label.set_color(colors[j]) for j,ax in enumerate(axes)]
 
     tkw = dict(size=4, width=1.5)
-    [ax.tick_params(axis='y', colors=colors[j], **tkw) for j,ax in enumerate(axes)]
+    [ax.tick_params(axis='y', colors=colors[j], labelsize=fs-5, **tkw) for j,ax in enumerate(axes)]
     [ax.yaxis.set_minor_locator(AutoMinorLocator())for ax in axes]
     [ax.tick_params(which='minor', length=4) for ax in axes]
     [ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0),useMathText=True) for ax in axes]
@@ -91,7 +92,7 @@ for idx,rate in enumerate(mydata.columns.get_level_values('EGR').unique()):
     labels=['P:{}bar'.format(round(x/100000,0)) for x in tempdata.columns.get_level_values('P').unique()]
     ax1.legend(labels,loc='center right',bbox_to_anchor=(0.9, 0.5),fontsize=fs-2)
     legs = ax1.get_legend()
-    [leg.set_color('black') for leg in legs.legendHandles]
+    [leg.set_color('black') for leg in legs.legend_handles]
 
     ax1.grid()
     plt.rcParams.update({'font.size': fs-5})

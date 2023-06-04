@@ -346,7 +346,7 @@ def build_freeflame(mix,width=0.03):
     flame = ct.FreeFlame(mix, width=width)
     return flame
 
-def mixer(phi,config,egr,real_egr=False):
+def mixer(phi,config,egr,real_egr=False,T_reinj=None):
     if(config.isARC):
         #remove extension from sheme variable
         ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
@@ -362,7 +362,10 @@ def mixer(phi,config,egr,real_egr=False):
     
     if(real_egr):
         dilutent = ct.Quantity(config.gas.egr,constant='HP')
-        dilutent.TP = config.gas.egr.T,config.gas.egr.P
+        if(T_reinj is not None):
+            dilutent.TP = T_reinj,config.gas.egr.P
+        else:
+            dilutent.TP = config.gas.egr.T,config.gas.egr.P
     else:
         dilutent = ct.Quantity(gas,constant='HP')
         dilutent.TPX = config.gas.egr.T,config.gas.egr.P,config.compo.egr
@@ -372,10 +375,23 @@ def mixer(phi,config,egr,real_egr=False):
     #print(mix.report())
     return mix.T, mix.P, mix.X
 
-def apply_egr_to_inlet(f,config,phi,egr):
+def apply_egr_to_inlet(f,config,phi,egr,dry=False,T_reinj=None):
     config.gas.egr.X = f.X[:,-1]
-    _,_,X = mixer(phi,config,egr,real_egr=True)
+    #print('EGR composition',config.gas.egr.X)
+
+    if(dry):
+        index = f.gas.species_index('H2O')
+        dry_egr = config.gas.egr.X
+        dry_egr[index] = 0.0
+        coef = 1/sum(dry_egr)
+        dry_egr = [coef*i for i in dry_egr]
+        config.gas.egr.X = dry_egr
+        #print('DRY EGR composition',config.gas.egr.X)
+        #print('sum dry egr',sum(config.gas.egr.X[:]))
+
+    T,P,X = mixer(phi,config,egr,real_egr=True,T_reinj=T_reinj)
     f.inlet.X = X
+    f.inlet.T = T
     return f
 
 def flamme_thickness(f):
@@ -394,7 +410,7 @@ def flamme_thickness(f):
     #print('Thicknes (m)',thickness)
     return thickness
 
-def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,species = ['CH4','O2','CO2','H2O'],vars=['EGR','phi','AF','P','Tin','T','u','dF']):
+def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr,dry,T_reinj=None,species = ['CH4','O2','CO2','H2O'],vars=['EGR','phi','AF','P','Tin','T','u','dF']):
     path = os.getcwd()+'/src'
     dfs=[]
     vartosave = vars+species
@@ -443,14 +459,14 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,species 
         # _,_,X = mixer(phi,config,egr,real_egr=True)
         # print('Inlet composition',X)
         if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr)
+            f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
         else:
             f.inlet.T = T
             f.P = P
             f.inlet.X = X
         #print('Inlet composition',f.inlet.X)
-        flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr)
-
+        flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr,dry=dry,T_reinj=T_reinj)
+        #flame.write_AVBP('solut_avbp.csv')
 
         #restart_rate = egr
         if(version.parse(ct.__version__) >= version.parse('2.5.0')):
@@ -467,11 +483,16 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,species 
             print('Cannot update progress bar')
     return df
 
-def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
+def solve_flame(f,flametitle,config,phi,egr,real_egr=False,dry=False,T_reinj=None):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     #################################################################
     # Iterations start here
     #################################################################
+    
+    residuals = []
+    index = f.gas.species_index('CO2')
+    last_residual = 1.0 
+
     verbose = 0
     loglevel  = 0                      # amount of diagnostic output (0 to 5)	    
     refine_grid = True                  # True to enable refinement, False to disable 	
@@ -489,164 +510,198 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False):
     #Set time steps whenever Newton convergence fails
     f.set_time_step(1e-06, [25, 40, 80, 140, 200, 350, 500, 700, 1000, 1300, 1700, 2000, 3000, 5000, 10000, 12000, 15000, 20000]) #s
 
-    # Calculation
-    if(verbose>0):
-        print('1st iteration...')
-    try:
-        if(verbose>1):
-            print('Inlet composition before f.solve',f.inlet.X)
-        f.solve(loglevel, refine_grid)
-        if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr)
-            if(verbose>0):
-                print('EGR applied to inlet')
-        #f.save(flametitle)
-    except FlameExtinguished:
-        print('Flame extinguished')
-        
-    except ct.CanteraError as e:
-        print('Error occurred while solving:', e)
-        
-    # Second iteration
-    #################
-    # Energy equation activated
-    f.energy_enabled = True
-    # mesh refinement
-    f.set_refine_criteria(ratio = 7.5, slope = 0.75, curve = 0.75)
-    # Calculation
-    if(verbose>0):
-        print('2nd iteration...')
-    try:
-        if(verbose>1):
-            print('Inlet composition before f.solve',f.inlet.X)
-        f.solve(loglevel, refine_grid)
-        if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr)
-            if(verbose>0):
-                print('EGR applied to inlet')
-        #f.save(flametitle)
-    except FlameExtinguished:
-        print('Flame extinguished')
-        
-    except ct.CanteraError as e:
-        print('Error occurred while solving:', e)
-        
-    # Third iteration
-    #################
-    # On raffine le maillage
-    f.set_refine_criteria(ratio = 5.0, slope = 0.4, curve = 0.4, prune = 0.03)
-    # Calculation
-    if(verbose>0):
-        print('3rd iteration...')
-    try:
-        if(verbose>1):
-            print('Inlet composition before f.solve',f.inlet.X)
-        f.solve(loglevel, refine_grid)
-        if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr)
-            if(verbose>0):
-                print('EGR applied to inlet')
-        #f.save(flametitle)
-    except FlameExtinguished:
-        print('Flame extinguished')
-        
-    except ct.CanteraError as e:
-        print('Error occurred while solving:', e)
-        
-    #################
-    # Fourth iteration
-    # Mesh refinement
-    f.set_refine_criteria(ratio = 5.0, slope = 0.1, curve = 0.1, prune = 0.01)
-    # Calculation
-    if(verbose>0):
-        print('4th iteration...')
-    try:
-        if(verbose>1):
-            print('Inlet composition before f.solve',f.inlet.X)
-        f.solve(loglevel, refine_grid)
-        if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr)
-            if(verbose>0):
-                print('EGR applied to inlet')
-        #f.save(flametitle)
-    except FlameExtinguished:
-        print('Flame extinguished')
-        
-    except ct.CanteraError as e:
-        print('Error occurred while solving:', e)
-        
-    # Fifth iteration
-    #################
-    #Mesh refinement
-    f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
-    # Calculation
-    if(verbose>0):
-        print('5th iteration...')
-    try:
-        if(verbose>1):
-            print('Inlet composition before f.solve',f.inlet.X)
-        f.solve(loglevel, refine_grid)
-        if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr)
-            if(verbose>0):
-                print('EGR applied to inlet')
+    while(True):
+        print('While loop starts')
+        # Calculation
+        if(verbose>0):
+            print('1st iteration...')
         try:
-            f.write_hdf(flametitle)
-        except:
-            f.save(flametitle[:-3]+'.yaml')
-    except FlameExtinguished:
-        print('Flame extinguished')
-        
-    except ct.CanteraError as e:
-        print('Error occurred while solving:', e)
-    # # Sixth iteration
-    #################
-    #NO Mesh refinement
-    #f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
-    # Calculation
-    if(verbose>0):
-        print('6th iteration...')
-    try:
-        if(verbose>1):
-            print('Inlet composition before f.solve',f.inlet.X)
-        f.solve(loglevel, refine_grid=False)
-        if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr)
-            if(verbose>0):
-                print('EGR applied to inlet')
-        #f.save(flametitle)
-    except FlameExtinguished:
-        print('Flame extinguished')
-        
-    except ct.CanteraError as e:
-        print('Error occurred while solving:', e)
-    
-    # # Seventh iteration
-    #################
-    #NO Mesh refinement
-    #f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
-    # Calculation
-    if(verbose>0):
-        print('7th iteration...')
-    try:
-        if(verbose>1):
-            print('Inlet composition before f.solve',f.inlet.X)
-        f.solve(loglevel, refine_grid=False)
-        if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr)
-            if(verbose>0):
-                print('EGR applied to inlet')
-        #f.save(flametitle)
+            if(verbose>1):
+                print('Inlet composition before f.solve',f.inlet.X)
+            f.solve(loglevel, refine_grid)
+            
+            if(real_egr):
+                XCO2_1 = f.X[index,-1]
+                f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
+                if(verbose>0):
+                    print('EGR applied to inlet')
+                
+            #f.save(flametitle)
+        except FlameExtinguished:
+            print('Flame extinguished')
+            
+        except ct.CanteraError as e:
+            print('Error occurred while solving:', e)
+            
+        # Second iteration
+        #################
+        # Energy equation activated
+        f.energy_enabled = True
+        # mesh refinement
+        f.set_refine_criteria(ratio = 7.5, slope = 0.75, curve = 0.75)
+        # Calculation
+        if(verbose>0):
+            print('2nd iteration...')
         try:
-            f.write_hdf(flametitle)
-        except:
-            f.save(flametitle[:-3]+'.yaml')
-    except FlameExtinguished:
-        print('Flame extinguished')
+            if(verbose>1):
+                print('Inlet composition before f.solve',f.inlet.X)
+            f.solve(loglevel, refine_grid)
+            
+            if(real_egr):
+                XCO2_2 = f.X[index,-1]
+                residuals.append(np.abs(XCO2_1-XCO2_2))
+                XCO2_1 = XCO2_2
+                f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
+                if(verbose>0):
+                    print('EGR applied to inlet')
+            #f.save(flametitle)
+        except FlameExtinguished:
+            print('Flame extinguished')
+            
+        except ct.CanteraError as e:
+            print('Error occurred while solving:', e)
+            
+        # Third iteration
+        #################
+        # On raffine le maillage
+        f.set_refine_criteria(ratio = 5.0, slope = 0.4, curve = 0.4, prune = 0.03)
+        # Calculation
+        if(verbose>0):
+            print('3rd iteration...')
+        try:
+            if(verbose>1):
+                print('Inlet composition before f.solve',f.inlet.X)
+            f.solve(loglevel, refine_grid)
+            if(real_egr):
+                XCO2_2 = f.X[index,-1]
+                residuals.append(np.abs(XCO2_1-XCO2_2))
+                XCO2_1 = XCO2_2
+                f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
+                if(verbose>0):
+                    print('EGR applied to inlet')
+            #f.save(flametitle)
+        except FlameExtinguished:
+            print('Flame extinguished')
+            
+        except ct.CanteraError as e:
+            print('Error occurred while solving:', e)
+            
+        #################
+        # Fourth iteration
+        # Mesh refinement
+        f.set_refine_criteria(ratio = 5.0, slope = 0.1, curve = 0.1, prune = 0.01)
+        # Calculation
+        if(verbose>0):
+            print('4th iteration...')
+        try:
+            if(verbose>1):
+                print('Inlet composition before f.solve',f.inlet.X)
+            f.solve(loglevel, refine_grid)
+            if(real_egr):
+                XCO2_2 = f.X[index,-1]
+                residuals.append(np.abs(XCO2_1-XCO2_2))
+                XCO2_1 = XCO2_2
+                f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
+                if(verbose>0):
+                    print('EGR applied to inlet')
+            #f.save(flametitle)
+        except FlameExtinguished:
+            print('Flame extinguished')
+            
+        except ct.CanteraError as e:
+            print('Error occurred while solving:', e)
+            
+        # Fifth iteration
+        #################
+        #Mesh refinement
+        f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
+        # Calculation
+        if(verbose>0):
+            print('5th iteration...')
+        try:
+            if(verbose>1):
+                print('Inlet composition before f.solve',f.inlet.X)
+            f.solve(loglevel, refine_grid)
+            if(real_egr):
+                XCO2_2 = f.X[index,-1]
+                residuals.append(np.abs(XCO2_1-XCO2_2))
+                XCO2_1 = XCO2_2
+                f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
+                if(verbose>0):
+                    print('EGR applied to inlet')
+            try:
+                f.write_hdf(flametitle)
+            except:
+                f.save(flametitle[:-3]+'.yaml')
+        except FlameExtinguished:
+            print('Flame extinguished')
+            
+        except ct.CanteraError as e:
+            print('Error occurred while solving:', e)
+        # # Sixth iteration
+        #################
+        #NO Mesh refinement
+        #f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
+        # Calculation
+        if(verbose>0):
+            print('6th iteration...')
+        try:
+            if(verbose>1):
+                print('Inlet composition before f.solve',f.inlet.X)
+            f.solve(loglevel, refine_grid=False)
+            if(real_egr):
+                XCO2_2 = f.X[index,-1]
+                residuals.append(np.abs(XCO2_1-XCO2_2))
+                XCO2_1 = XCO2_2
+                f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
+                if(verbose>0):
+                    print('EGR applied to inlet')
+            #f.save(flametitle)
+        except FlameExtinguished:
+            print('Flame extinguished')
+            
+        except ct.CanteraError as e:
+            print('Error occurred while solving:', e)
         
-    except ct.CanteraError as e:
-        print('Error occurred while solving:', e)
-    
+        # # Seventh iteration
+        #################
+        #NO Mesh refinement
+        #f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
+        # Calculation
+        if(verbose>0):
+            print('7th iteration...')
+        try:
+            if(verbose>1):
+                print('Inlet composition before f.solve',f.inlet.X)
+            f.solve(loglevel, refine_grid=False)
+            if(real_egr):
+                XCO2_2 = f.X[index,-1]
+                residuals.append(np.abs(XCO2_1-XCO2_2))
+                XCO2_1 = XCO2_2
+                f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
+                if(verbose>0):
+                    print('EGR applied to inlet')
+            #f.save(flametitle)
+            try:
+                f.write_hdf(flametitle)
+            except:
+                f.save(flametitle[:-3]+'.yaml')
+        except FlameExtinguished:
+            print('Flame extinguished')
+            
+        except ct.CanteraError as e:
+            print('Error occurred while solving:', e)
+        if(real_egr):
+            last_residual = abs(residuals[-1]-residuals[-2])
+            print('last residual',last_residual)
+            print('Residuals',residuals)
+        else:
+            break
+        #print('last residual',last_residual)
+        if(last_residual<1e-11):
+            print('BREAK HERE')
+            break
+        
     return f
 
 def show_graphs(df,title=None,labels=None,xlabel=None,ylabel=None,style='-o',subplot=1,ax=None,plot=True,save=False,path=None):
@@ -683,19 +738,20 @@ if __name__ == '__main__':
     st = time.time()
 
     config = case('CH4:1.',                     #fuel compo
-                  [300,500],                    #tin fuel
-                  [1e5,5e5],                        #pin fuel
+                  [300],                    #tin fuel
+                  [1e5],                        #pin fuel
                   'O2:1. N2:3.76',              #ox compo
-                  [300,500],                    #tin ox
-                  [1e5,5e5],                        #pin ox
+                  [300],                    #tin ox
+                  [1e5],                        #pin ox
                   'CO2:1.',                     #egr compo
-                  [300,500],                    #tin egr
-                  [1e5,5e5],                        #pin egr
-                  [i for i in np.arange(0.80,1.22,0.05)],        #phi range
-                  [0.0,0.1,0.3,0.5],            #egr range
+                  [300],                    #tin egr
+                  [1e5],                        #pin egr
+                  [1.0],#[i for i in np.arange(0.80,1.22,0.2)],        #phi range
+                  [0.3],            #egr range
                   'mole',                       #egr rate unit
-                  'schemes/CH4_16_250_10_QC.cti',               #scheme
-                  'ARC', 
+                  'schemes/BFER_methane.cti',               #scheme
+                  'Mix', #transport model
+                  'NA', 
                  )
     
 
@@ -734,12 +790,14 @@ if __name__ == '__main__':
         print(dfs)
 
     elif(dim=='1D'):
-        real_egr = False
+        real_egr = True
+        dry = True
         restart_rate = None # config.egr_range[0] #set to None if want to compute from the first egr value in egr_range
+        T_reinjection = 1000.0
         #for phi in config.phi_range:
             #Computation pool 
         pool = mp.Pool(min(len(items),ncpu))
-        results = [pool.apply_async(compute_solutions_1D, args=item+[restart_rate,real_egr],callback=update) for item in items]
+        results = [pool.apply_async(compute_solutions_1D, args=item+[restart_rate,real_egr,dry,T_reinjection],callback=update) for item in items]
         pool.close()
         # wait for all tasks to complete and processes to close
         pool.join()
@@ -747,7 +805,7 @@ if __name__ == '__main__':
         #get results & store them in csv
         unpacked=[res.get() for res in results]
         output=pd.concat(unpacked,axis=0)
-        output.to_csv(path+'/plan_total_QC_16_ARC_canavbp'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
+        output.to_csv(path+'/TEST'+'_'+time.strftime("%Y%m%d-%H%M%S")+'.csv',index=False)
 
         print(output)
 
