@@ -71,9 +71,9 @@ where $h^{m}\left(T\right)$ are the molar enthalpies of the species
 calculated from NASA polynomials.\
 Finally, $T_{P}$ is determined by linear interpolation between two
 temperature limits $T_{a}$ and $T_{b}$ such that : 
-$$\begin{aligned}
+$$\begin{aligned}\\
 T_{p} & =T_{a}+\frac{H_{prod-CO_{2}}\left(T_{P}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)\\
-\Longleftrightarrow & T_{p}=T_{a}+\frac{H_{reac}\left(T_{R}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)
+\Longleftrightarrow & T_{p}=T_{a}+\frac{H_{reac}\left(T_{R}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)\\
 \end{aligned}$$
 
 ## Calculating T from LHV without EGR
