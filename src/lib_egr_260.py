@@ -477,10 +477,7 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr,dry,T_reinj=No
         index = [f.gas.species_index(specie) for specie in species]
         df = pd.concat([df, pd.DataFrame([[egr, phi,1/phi, P, T, f.T[-1],SL0,flamme_thickness(f)]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
         #dfs = pd.concat([df],axis=0)
-        try:
-            update()
-        except:
-            print('Cannot update progress bar')
+        
     return df
 
 def solve_flame(f,flametitle,config,phi,egr,real_egr=False,dry=False,T_reinj=None):
@@ -492,7 +489,7 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False,dry=False,T_reinj=Non
     residuals = []
     index = f.gas.species_index('CO2')
     last_residual = 1.0 
-
+    i=0
     verbose = 0
     loglevel  = 0                      # amount of diagnostic output (0 to 5)	    
     refine_grid = True                  # True to enable refinement, False to disable 	
@@ -510,8 +507,8 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False,dry=False,T_reinj=Non
     #Set time steps whenever Newton convergence fails
     f.set_time_step(1e-06, [25, 40, 80, 140, 200, 350, 500, 700, 1000, 1300, 1700, 2000, 3000, 5000, 10000, 12000, 15000, 20000]) #s
 
-    while(True):
-        print('While loop starts')
+    while(True or i<5):
+        #print('While loop starts')
         # Calculation
         if(verbose>0):
             print('1st iteration...')
@@ -693,15 +690,17 @@ def solve_flame(f,flametitle,config,phi,egr,real_egr=False,dry=False,T_reinj=Non
             print('Error occurred while solving:', e)
         if(real_egr):
             last_residual = abs(residuals[-1]-residuals[-2])
-            print('last residual',last_residual)
-            print('Residuals',residuals)
+            #print('last residual',last_residual)
+            #print('Residuals',residuals)
         else:
             break
         #print('last residual',last_residual)
         if(last_residual<1e-11):
-            print('BREAK HERE')
+            #print('BREAK HERE')
             break
-        
+        i+=1
+        if(i>5):
+            raise Exception('Too many iterations of solve_flame, cannot converge')
     return f
 
 def show_graphs(df,title=None,labels=None,xlabel=None,ylabel=None,style='-o',subplot=1,ax=None,plot=True,save=False,path=None):
@@ -746,7 +745,7 @@ if __name__ == '__main__':
                   'CO2:1.',                     #egr compo
                   [300],                    #tin egr
                   [1e5],                        #pin egr
-                  [1.0],#[i for i in np.arange(0.80,1.22,0.2)],        #phi range
+                  [i for i in np.arange(0.80,1.22,0.2)],        #phi range
                   [0.3],            #egr range
                   'mole',                       #egr rate unit
                   'schemes/BFER_methane.cti',               #scheme

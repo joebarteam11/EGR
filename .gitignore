@@ -10,6 +10,9 @@ ssb*
 *.xml
 log_*
 
+TEST_*
+CRASHTEST*
+
 # C extensions
 *.so
 
