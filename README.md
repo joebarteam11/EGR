@@ -59,7 +59,7 @@ $$CH_{4}+2(O_{2}+3,76N_{2})+zCO_{2}\rightarrow\left(1+z\right)CO_{2}+7,52N_{2}+2
 Enthalpy balance :
 $$H_{prod}\left(T_{P}\right)=H_{in}\left(T_{in}\right)=H_{reac}\left(T_{R}\right)+H_{CO_{2},r\acute{e}inj}\left(T_{P}\right)\Longleftrightarrow\underset{H_{prod-CO_{2}}\left(T_{P}\right)}{\underbrace{H_{prod}\left(T_{P}\right)-H_{CO_{2},r\acute{e}inj}\left(T_{P}\right)}}=H_{reac}\left(T_{R}\right)$$
 
-With: $\begin{cases}H_{reac}\left(T\right)=1h_{CH_{4}}^{m}\left(T\right)+2h_{O_{2}}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\\H_{CO_{2},r\acute{e}inj}\left(T\right)=zh_{CO_{2}}^{m}\left(T\right)\\H_{prod,\,sans\,pr\acute{e}l\grave{e}v}\left(T\right)=1h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\end{cases}$
+With $\begin{cases}H_{reac}\left(T\right)=1h_{CH_{4}}^{m}\left(T\right)+2h_{O_{2}}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\\H_{CO_{2},r\acute{e}inj}\left(T\right)=zh_{CO_{2}}^{m}\left(T\right)\\H_{prod,\,sans\,pr\acute{e}l\grave{e}v}\left(T\right)=1h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\end{cases}$
 
 and $H_{prod-CO_{2}}\left(T\right)=\left(1-z\right)h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)$\
 \
@@ -68,7 +68,7 @@ calculated from NASA polynomials.\
 Finally, $T_{P}$ is determined by linear interpolation between two
 temperature limits $T_{a}$ and $T_{b}$ such that : $$\begin{aligned}T_{p} & =T_{a}+\frac{H_{prod-CO_{2}}\left(T_{P}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)\\\Longleftrightarrow & T_{p}=T_{a}+\frac{H_{reac}\left(T_{R}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)\end{aligned}$$
 
-## Calculating T from PCI without EGR
+## Calculating T from LHV without EGR
 
 The two regimes are distinguished:
 
@@ -81,16 +81,16 @@ $$\phi CH_{4}+2(O_{2}+3,76N_{2})\rightarrow CO_{2}+2\phi H_{2}O+7,52N_{2}+\left(
 The stoichiometric mass ratio $s_{Y}$:
 $$s_{Y}=s_{X}\frac{W_{air}}{W_{fuel}}=17.16$$
 
-Calculation of ICP:
+Calculation of LHV:
 
-$$PCI\left[kJ/kg\right]=\frac{-\Delta H_{reaction}^{0}}{W_{fuel}}=\frac{-\left(H_{f,prod}^{0}-H_{f,reac}^{0}\right)\left[kJ/mol\right]}{W_{CH_{4}}\left[kg/mol\right]}$$
+$$LHV\left[kJ/kg\right]=\frac{-\Delta H_{reaction}^{0}}{W_{fuel}}=\frac{-\left(H_{f,prod}^{0}-H_{f,reac}^{0}\right)\left[kJ/mol\right]}{W_{CH_{4}}\left[kg/mol\right]}$$
 
 Calculation of flue gas $\overline{C_{p,GB}}\left(\phi\right)$:
 
 $$\overline{C_{p,GB}}\left(\phi\right)=\frac{\underset{k}{\sum}\nu_{k}C_{p,mol,k}}{\underset{k}{\sum}\nu_{k}W_{k}}$$
 
 Calculation of T :
-$$T_{P}=T_{R}+\frac{PCI}{\overline{C_{p,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{tot}}$$
+$$T_{P}=T_{R}+\frac{LHV}{\overline{C_{p,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{tot}}$$
 
 with
 $\dot{m}_{tot}=\dot{m}_{f}+\dot{m}_{air}=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)$
@@ -106,26 +106,24 @@ $\dot{m}_{tot}=\dot{m}_{f}+\dot{m}_{air}+\dot{m}_{GB}$ (meaning
 $\dot{m}_{GB,r\acute{e}inj}$)
 
 and $\dot{m}_{GB}=\left(\dot{m}_{f}+\dot{m}_{air}\right)\frac{p}{1-p}$
-with p the mass percentage of burnt gas reinjected, i.e.
-$p=\frac{\dot{m}_{GB}}{\dot{m}_{tot}}$ (see the section [below](#reasoning-on-the-molar-quantities-of-gas-reinjected-for-a-fixed-egr-rate) for a different line of
-reasoning).
+with p the mass percentage of burnt gas reinjected, i.e. $p=\frac{\dot{m}_{GB}}{\dot{m}_{tot}}$ (see the section [below](#reasoning-on-the-molar-quantities-of-gas-reinjected-for-a-fixed-egr-rate) for a different reasoning).
 
 Thus, $\dot{m}_{tot}$ expression is : $$\begin{aligned}\dot{m}_{tot} & =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{GB}=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right)\\& =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)\end{aligned}$$
 
 $T_{p}$ expression become :
-$$T_{P}=T_{mix}+\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{tot}}=T_{mel}+\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
+$$T_{P}=T_{mix}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{tot}}=T_{mel}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
 
 Where $T_{mix}$ is defined from:
 
 $$T_{mix}\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]=T_{R}\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+T_{p}p\overline{C_{p,GB}}\left(\phi\right)$$
 
-$$T_{P}=T_{mix}+\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}=\frac{T_{R}\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+T_{p}p\overline{C_{p,GB}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}+\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
+$$T_{P}=T_{mix}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}=\frac{T_{R}\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+T_{p}p\overline{C_{p,GB}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
 
-$$\Longleftrightarrow T_{P}-\frac{T_{p}p\overline{C_{p,GB}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}=\frac{T_{R}\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}+\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
+$$\Longleftrightarrow T_{P}-\frac{T_{p}p\overline{C_{p,GB}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}=\frac{T_{R}\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
 
-$$\Longleftrightarrow T_{P}=\frac{\frac{T_{R}\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}+\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}}{1-\frac{p\overline{C_{p,GB}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}}$$
+$$\Longleftrightarrow T_{P}=\frac{\frac{T_{R}\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}}{1-\frac{p\overline{C_{p,GB}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}}$$
 
-$$T_{P}=T_{R}+\frac{\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}}{1-\frac{p\overline{C_{p,GB}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}}$$
+$$T_{P}=T_{R}+\frac{\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}}{1-\frac{p\overline{C_{p,GB}}\left(\phi\right)}{\left[\left(1-p\right)\overline{C_{p,GF}}\left(\phi\right)+p\overline{C_{p,GB}}\left(\phi\right)\right]}}$$
 
 ## Reasoning on the molar quantities of gas reinjected for a fixed EGR rate
 
