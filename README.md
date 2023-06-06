@@ -90,10 +90,10 @@ Calculation of flue gas $\overline{C_{p,GB}}\left(\phi\right)$:
 $$\overline{C_{p,GB}}\left(\phi\right)=\frac{\underset{k}{\sum}\nu_{k}C_{p,mol,k}}{\underset{k}{\sum}\nu_{k}W_{k}}$$
 
 Calculation of T :
-$$T_{P}=T_{R}+\frac{LHV}{\overline{C_{p,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{tot}}$$
+$$T_{P}=T_{R}+\frac{LHV}{\overline{C_{p,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{\text{tot}}}$$
 
 with
-$\dot{m}_{tot}=\dot{m}_{f}+\dot{m}_{air}=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)$
+$\dot{m}_{\text{tot}}=\dot{m}_{f}+\dot{m}_{air}=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)$
 
 In rich : $\dot{m}_{f,br\hat{u}l\acute{e}}=\frac{\dot{m}_{f}}{\phi}$
 
@@ -101,17 +101,17 @@ In lean: $\dot{m}_{f,br\hat{u}l\acute{e}}=\dot{m}_{f}$
 
 ## Calculation of T with EGR at $T_{p}$
 
-Only the expression of $\dot{m}_{tot}$ is modified:
-$\dot{m}_{tot}=\dot{m}_{f}+\dot{m}_{air}+\dot{m}_{GB}$ (meaning
+Only the expression of $\dot{m}_{\text{tot}}$ is modified:
+$\dot{m}_{\text{tot}}=\dot{m}_{f}+\dot{m}_{air}+\dot{m}_{GB}$ (meaning
 $\dot{m}_{GB,r\acute{e}inj}$)
 
 and $\dot{m}_{GB}=\left(\dot{m}_{f}+\dot{m}_{air}\right)\frac{p}{1-p}$
-with p the mass percentage of burnt gas reinjected, i.e. $p=\frac{\dot{m}_{GB}}{\dot{m}_{tot}}$ (see the section [below](#reasoning-on-the-molar-quantities-of-gas-reinjected-for-a-fixed-egr-rate) for a different reasoning).
+with p the mass percentage of burnt gas reinjected, i.e. $p=\frac{\dot{m}_{GB}}{\dot{m}_{\text{tot}}}$ (see the section [below](#reasoning-on-the-molar-quantities-of-gas-reinjected-for-a-fixed-egr-rate) for a different reasoning).
 
-Thus, $\dot{m}_{tot}$ expression is : $$\begin{aligned}\dot{m}_{tot} & =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{GB}=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right)\\& =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)\end{aligned}$$
+Thus, $\dot{m}_{\text{tot}}$ expression is : $$\begin{aligned}\dot{m}_{\text{tot}} & =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{GB}=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right)\\& =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)\end{aligned}$$
 
 $T_{p}$ expression become :
-$$T_{P}=T_{mix}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{tot}}=T_{mel}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
+$$T_{P}=T_{mix}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{\text{tot}}}=T_{mel}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
 
 Where $T_{mix}$ is defined from:
 
