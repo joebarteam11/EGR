@@ -59,21 +59,14 @@ $$CH_{4}+2(O_{2}+3,76N_{2})+zCO_{2}\rightarrow\left(1+z\right)CO_{2}+7,52N_{2}+2
 Enthalpy balance :
 $$H_{prod}\left(T_{P}\right)=H_{in}\left(T_{in}\right)=H_{reac}\left(T_{R}\right)+H_{CO_{2},r\acute{e}inj}\left(T_{P}\right)\Longleftrightarrow\underset{H_{prod-CO_{2}}\left(T_{P}\right)}{\underbrace{H_{prod}\left(T_{P}\right)-H_{CO_{2},r\acute{e}inj}\left(T_{P}\right)}}=H_{reac}\left(T_{R}\right)$$
 
-With:$\begin{cases}
-H_{reac}\left(T\right)=1h_{CH_{4}}^{m}\left(T\right)+2h_{O_{2}}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\\
-H_{CO_{2},r\acute{e}inj}\left(T\right)=zh_{CO_{2}}^{m}\left(T\right)\\
-H_{prod,\,sans\,pr\acute{e}l\grave{e}v}\left(T\right)=1h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)
-\end{cases}$
+With: $\begin{cases}H_{reac}\left(T\right)=1h_{CH_{4}}^{m}\left(T\right)+2h_{O_{2}}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\\H_{CO_{2},r\acute{e}inj}\left(T\right)=zh_{CO_{2}}^{m}\left(T\right)\\H_{prod,\,sans\,pr\acute{e}l\grave{e}v}\left(T\right)=1h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\end{cases}$
 
-and$H_{prod-CO_{2}}\left(T\right)=\left(1-z\right)h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)$\
+and $H_{prod-CO_{2}}\left(T\right)=\left(1-z\right)h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)$\
 \
 where $h^{m}\left(T\right)$ are the molar enthalpies of the species
 calculated from NASA polynomials.\
 Finally, $T_{P}$ is determined by linear interpolation between two
-temperature limits $T_{a}$ and $T_{b}$ such that : $$\begin{aligned}
-T_{p} & =T_{a}+\frac{H_{prod-CO_{2}}\left(T_{P}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)\\
-\Longleftrightarrow & T_{p}=T_{a}+\frac{H_{reac}\left(T_{R}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)
-\end{aligned}$$
+temperature limits $T_{a}$ and $T_{b}$ such that : $$\begin{aligned}T_{p} & =T_{a}+\frac{H_{prod-CO_{2}}\left(T_{P}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)\\\Longleftrightarrow & T_{p}=T_{a}+\frac{H_{reac}\left(T_{R}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}{H_{prod-CO_{2}}\left(T_{b}\right)-H_{prod-CO_{2}}\left(T_{a}\right)}\left(T_{b}-T_{a}\right)\end{aligned}$$
 
 ## Calculating T from PCI without EGR
 
@@ -117,10 +110,7 @@ with p the mass percentage of burnt gas reinjected, i.e.
 $p=\frac{\dot{m}_{GB}}{\dot{m}_{tot}}$ (see the section [below](#reasoning-on-the-molar-quantities-of-gas-reinjected-for-a-fixed-egr-rate) for a different line of
 reasoning).
 
-Thus, $\dot{m}_{tot}$ expression is : $$\begin{aligned}
-\dot{m}_{tot} & =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{GB}=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right)\\
- & =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)
-\end{aligned}$$
+Thus, $\dot{m}_{tot}$ expression is : $$\begin{aligned}\dot{m}_{tot} & =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{GB}=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right)\\& =\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)\end{aligned}$$
 
 $T_{p}$ expression become :
 $$T_{P}=T_{mix}+\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{tot}}=T_{mel}+\frac{PCI}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}_{f,br\hat{u}l\acute{e}}}{\dot{m}_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
