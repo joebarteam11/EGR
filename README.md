@@ -60,10 +60,10 @@ Enthalpy balance :
 $$H_{prod}\left(T_{P}\right)=H_{in}\left(T_{in}\right)=H_{reac}\left(T_{R}\right)+H_{CO_{2},r\acute{e}inj}\left(T_{P}\right)\Longleftrightarrow\underset{H_{prod-CO_{2}}\left(T_{P}\right)}{\underbrace{H_{prod}\left(T_{P}\right)-H_{CO_{2},r\acute{e}inj}\left(T_{P}\right)}}=H_{reac}\left(T_{R}\right)$$
 
 With:
-$\begin{cases}\\
-H_{reac}\left(T\right)=1h_{CH_{4}}^{m}\left(T\right)+2h_{O_{2}}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\\
-H_{CO_{2},r\acute{e}inj}\left(T\right)=zh_{CO_{2}}^{m}\left(T\right)\\
-H_{prod,\,sans\,pr\acute{e}l\grave{e}v}\left(T\right)=1h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\\
+$\begin{cases}\\\
+H_{reac}\left(T\right)=1h_{CH_{4}}^{m}\left(T\right)+2h_{O_{2}}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\\\
+H_{CO_{2},r\acute{e}inj}\left(T\right)=zh_{CO_{2}}^{m}\left(T\right)\\\
+H_{prod,\,sans\,pr\acute{e}l\grave{e}v}\left(T\right)=1h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)\\\
 \end{cases}$
 
 and $H_{prod-CO_{2}}\left(T\right)=\left(1-z\right)h_{CO_{2}}^{m}\left(T\right)+2h_{H_{2}O}^{m}\left(T\right)+7,52h_{N_{2}}^{m}\left(T\right)$\
