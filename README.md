@@ -101,7 +101,7 @@ In lean: $\dot{m}_{f,br\hat{u}l\acute{e}}=\dot{m}_{f}$
 
 ## Calculation of T with EGR at $T_{p}$
 
-Only the expression of $\dot{m}_{\text{tot}}$ is modified:
+Only the expression of $\dot{m}$ $_{tot}$ is modified:
 $\dot{m}_{\text{tot}}=\dot{m}_{f}+\dot{m}_{air}+\dot{m}_{GB}$ (meaning
 $\dot{m}_{GB,r\acute{e}inj}$)
 
