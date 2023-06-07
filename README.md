@@ -142,9 +142,9 @@ $$CH_{4}+2(O_{2}+3,76N_{2})+0CO_{2}+0N_{2}\rightarrow\underset{\overbrace{z_{0}}
 
 Reasoning by recurrence :
 
-$$CH_{4}\,+\,2(O_{2}+3,76N_{2})\,+\underset{\overbrace{p\times\left(1+z_{0}\right)}}{z_{1}}CO_{2}\,+\,z_{1}N_{2}\rightarrow(1+z_{1})CO_{2}\,+\,(1+z_{1})\times7,52N_{2}\,+\,2H_{2}O$$
+$$CH_{4}+2(O_{2}+3,76N_{2})+\underset{\overbrace{p\times\left(1+z_{0}\right)}}{z_{1}}CO_{2}+z_{1}N_{2}\rightarrow(1+z_{1})CO_{2}+(1+z_{1})\times7,52N_{2}+2H_{2}O$$
 
-$$CH_{4}\,+\,2(O_{2}+3,76N_{2})\,+\,z_{n}CO_{2}\,+\,z_{n}N_{2}\rightarrow(1\,+z_{n})CO_{2}\,+\,(1+z_{n})\times7,52N_{2}\,+\,2H_{2}O$$
+$$CH_{4}+2(O_{2}+3,76N_{2})+z_{n}CO_{2}+z_{n}N_{2}\rightarrow(1+z_{n})CO_{2}+(1+z_{n})\times7,52N_{2}+2H_{2}O$$
 
 This leads to the following relationship:
 
