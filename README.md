@@ -114,7 +114,7 @@ and $\dot{m}\_{GB}=\left(\dot{m}\_{f}+\dot{m}\_{air}\right)\frac{p}{1-p}$
 with p the mass percentage of burnt gas reinjected, i.e. $p=\frac{\dot{m}\_{GB}}{\dot{m}\_{tot}}$ (see the section [below](#reasoning-on-the-molar-quantities-of-gas-reinjected-for-a-fixed-egr-rate) for a different reasoning).
 
 Thus, $\dot{m}\_{tot}$ expression is : 
-$' \begin{aligned}\dot{m}\_{tot} & =\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}\_{GB}=\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right) & =\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)\end{aligned} '$
+$' \begin{aligned}\dot{m}\_{tot} & =\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}\_{GB}=\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right)\\ r & =\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)\end{aligned} '$
 
 $T_{p}$ expression become :
 $$T_{P}=T_{mix}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}\_{f,br\hat{u}l\acute{e}}}{\dot{m}\_{tot}}=T_{mel}+\frac{LHV}{\overline{C_{P,GB}}\left(\phi\right)}\frac{\dot{m}\_{f,br\hat{u}l\acute{e}}}{\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)}$$
