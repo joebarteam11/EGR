@@ -115,7 +115,7 @@ with p the mass percentage of burnt gas reinjected, i.e. $p=\frac{\dot{m}\_{GB}}
 
 Thus, $\dot{m}\_{tot}$ expression is : 
 $' 
-\begin{aligned} \ \dot{m}\_{tot} & =\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}\_{GB}=\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right) \ \\ \ =\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)\end{aligned} \ 
+\begin{aligned} \dot{m}\_{tot} & =\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}\_{GB}=\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)+\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{p}{1-p}\right) & =\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(1+\frac{p}{1-p}\right)=\dot{m}\_{f}\left(1+\frac{s_{Y}}{\phi}\right)\left(\frac{1}{1-p}\right)\end{aligned}  
 '$
 
 $T_{p}$ expression become :
