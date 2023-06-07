@@ -4,13 +4,20 @@
 
 Based on a given configuration (3 TPX tanks [fuel, oxidizer and EGR],
 a specific equivalence ratio, a percentage [mass, molar, volumetric]
-of EGR and a kinetic scheme), the tool calculates equilibrium, 0D
-reactors with specified residence time, or 1D premixed flames using
-CANTERA, depending on the user's requirements.
+of EGR and a kinetic scheme), the tool can calculates 
 
-Ranges of pressures, temperatures, richness and %EGR can be quickly
-addressed since this tool can be run using mpi4py. Output data are
-stored in Pandas dataframes and saved for post-processing.
+* equilibrium, 
+* 0D
+reactors with specified residence time, 
+* 1D premixed flames 
+
+using CANTERA, depending on the user's requirements.
+
+![](/img/schematic.png)
+
+Ranges of pressures, temperatures, equivalence ratio and %EGR can be quickly
+addressed since this tool can be run using `mpi4py`. Output data are
+stored in `pandas` dataframes and saved for post-processing.
 
 # Definitions
 
@@ -24,8 +31,8 @@ $$\phi=S_{x}\frac{X_{fuel}}{X_{O_{2}}}$$
 For Methane,
 $$S_{x}=\left.\frac{X_{O_{2}}}{X_{fuel}}\right|_{stoech}=2$$
 
-(hardcoded value for now, enhancement would be at list to be able to
-provide it with other parameters)
+(hardcoded value for now, enhancement would be at least to be able to
+provide it with the other parameters)
 
 ## EGR rate
 
