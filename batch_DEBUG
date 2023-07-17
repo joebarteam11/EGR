@@ -2,15 +2,19 @@
 #SBATCH --partition debug
 #SBATCH --time=00:10:00 
 #SBATCH --nodes=1 --ntasks-per-node=36
-#SBATCH --job-name=EGR1D
-#SBATCH --output=ssb_output_debug.o       ## Name of the output report file
-#SBATCH --error=ssb_error_debug.e        ## Name of the error report file
-#SBATCH --mail-user theot@cerfacs.fr
+#SBATCH --job-name=EGR1D-opti
+#SBATCH --output=ssb_output-opti2.o       ## Name of the output report file
+#SBATCH --error=ssb_error-opti2.e        ## Name of the error report file
+#SBATCH --mail-user elhachem@cerfacs.fr
 #SBATCH --mail-type=ALL
 
 cd ${SLURM_SUBMIT_DIR}
-source /home/cfd/theot/.bashrc
-#conda_setup
-source activate can230
+module purge
+module load mpi/intelmpi/2018.1.163
+module load cantera/2.3_avbp_py395
 
-python3 /home/cfd/theot/EGR0D/src/lib_egr_260.py > log_debug.out
+export CUSTOM_LIB=/scratch/cfd/elhachem/egr-git/EGR0D/schemes
+export LD_LIBRARY_PATH=$CUSTOM_LIB:$LD_LIBRARY_PATH 
+
+mpirun -np $SLURM_NPROCS python3 /scratch/cfd/elhachem/egr-git2/EGR0D/src/main.py > output-opti-oti.out
+#python3 /home/cfd/theot/EGR0D/lib_egr_260.py > log_EGR1D.out
