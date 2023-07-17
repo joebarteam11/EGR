@@ -12,7 +12,7 @@ print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
     #'plan_total_dilution_BFERMIX_20230412-154440.csv',
-    'all_data_with_flamthick.csv',
+    'CRASHTEST_20230608-164516.csv',
     # 'plan_partiel_dilution_0.0_20230406-120038.csv',
     # 'plan_partiel_dilution_0.1_20230406-131614.csv',
     # 'plan_partiel_dilution_0.3_20230406-201540.csv',
@@ -20,8 +20,8 @@ files=[
 ]
 files=[path+'/results/'+file for file in files]
 
-inputs=pd.concat([pd.read_csv(file).round({'P':1,'EGR':1,'phi':2}) for file in files])
-papier=pd.read_csv(path+'/results/'+'data-handmade.csv',delimiter=';').round({'EGR':1,'phi':2})
+inputs=pd.concat([pd.read_csv(file).round({'P':1,'EGR':1,'phi':2,'Tin':1}) for file in files])
+#papier=pd.read_csv(path+'/results/'+'data-handmade.csv',delimiter=';').round({'EGR':1,'phi':2})
 #papier=pd.read_csv(path+'/plan_total_dilution_BFERUNITY_20230412-170317.csv').round({'P':1,'EGR':1,'phi':2})
 #print(input)
 
@@ -29,8 +29,8 @@ var_to_plot=['dF',
              'u',
              'T',
             ]
-ylabels = ('Flame Thickness [m]',
-            'SL0[m.s-1]',
+ylabels = ('Flame Thickness [um]',
+            'SL0[cm.s-1]',
             'T[K]',
           )
 titles = ['Flame thickness',
@@ -38,13 +38,13 @@ titles = ['Flame thickness',
           'Adiabatic flame temperature',
          ]
 
-mech=['Aramco1.3','[1]']
+mech=['SchemaTest','[1]']
 colors=['b','r','g','k','m','c','y']
 
 for idx,var in enumerate(var_to_plot):
 
     for i in range(2):
-        mydata=inputs.pivot_table(index='phi',columns=['P','EGR',],values=var)
+        mydata=inputs.pivot_table(index='phi',columns=['Tin','P',],values=var)
         try:
             paper=papier.pivot_table(index='phi',columns=['EGR',],values=var)
         except:
@@ -52,28 +52,29 @@ for idx,var in enumerate(var_to_plot):
 
         #get only P > 200000 in df2 and df
         if(i==0):
-            mydata=mydata.loc[:,mydata.columns.get_level_values('P')>200000]
+            mydata=mydata.loc[:,mydata.columns.get_level_values('Tin')<1000]
             try:
-                paper=paper.loc[:,paper.columns.get_level_values('P')>200000]
+                paper=paper.loc[:,paper.columns.get_level_values('Tin')<1000]
             except:
                 pass
 
             #get only EGR < 0.7 in df3 and df1
-            mydata=mydata.loc[:,mydata.columns.get_level_values('EGR')<0.7]
-            try:
-                paper=paper.loc[:,paper.columns.get_level_values('EGR')<0.7]
-            except:
-                pass
-        else:
             mydata=mydata.loc[:,mydata.columns.get_level_values('P')<200000]
             try:
                 paper=paper.loc[:,paper.columns.get_level_values('P')<200000]
             except:
                 pass
-            #get only EGR < 0.7 in df3 and df1
-            mydata=mydata.loc[:,mydata.columns.get_level_values('EGR')<0.7]
+        else:
+
+            mydata=mydata.loc[:,mydata.columns.get_level_values('Tin')<1000]
             try:
-                paper=paper.loc[:,paper.columns.get_level_values('EGR')<0.7]
+                paper=paper.loc[:,paper.columns.get_level_values('Tin')<1000]
+            except:
+                pass
+            #get only EGR < 0.7 in df3 and df1
+            mydata=mydata.loc[:,mydata.columns.get_level_values('P')>200000]
+            try:
+                paper=paper.loc[:,paper.columns.get_level_values('P')>200000]
             except:
                 pass
 
@@ -86,7 +87,7 @@ for idx,var in enumerate(var_to_plot):
         #print(df3.columns.names)
 
         title='(1D) '+titles[idx]+' vs equivalence ratio ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'
-        human_labels = labels+['hand-made calculations (constant Cp)']
+        human_labels = labels#+['hand-made calculations (constant Cp)']
         xlabel='Phi'
         ylabel=ylabels[idx]
 
@@ -112,7 +113,7 @@ for idx,var in enumerate(var_to_plot):
         #ax.legend('[1]')
         plt.tight_layout()
         #plt.show()
-        plt.savefig(path+'/img/'+var+str(i)+'_1D_ARAMCO13.png', dpi=300, bbox_inches='tight')
+        plt.savefig(path+'/'+var+str(i)+'_GRI30.png', dpi=300, bbox_inches='tight')
         #plt.close()
 
     #show_graphs(mydata,title,human_labels,xlabel,ylabel,subplot=1,plot=False,save=False,path=path+'/img/')

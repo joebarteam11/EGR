@@ -12,7 +12,7 @@ print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
     #'plan_total_dilution_BFERUNITY_20230417-174627.csv',
-    'all_data_with_flamthick.csv',
+    'CRASHTEST_20230608-164516.csv',
     # 'plan_partiel_dilution_0.0_20230406-120038.csv',
     # 'plan_partiel_dilution_0.1_20230406-131614.csv',
     # 'plan_partiel_dilution_0.3_20230406-201540.csv',

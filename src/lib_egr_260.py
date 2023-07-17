@@ -83,7 +83,7 @@ class case:
             yield self.ox
             yield self.egr
 
-def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass'): 
+def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass',egr_def='%egr/%fuel'): 
     mw_fuel = config.gas.fuel.mean_molecular_weight/1000 #kg/mol
     mw_oxidizer = config.gas.ox.mean_molecular_weight/1000 #kg/mol
     mw_egr = config.gas.egr.mean_molecular_weight/1000 #kg/mol
@@ -194,6 +194,10 @@ def reactor_0D(phi,config,egr_rate,real_egr,steady_state_only=True):
     #create the reactor network
     sim=ct.ReactorNet([reactor])
     sim.reinitialize()
+    sim.rtol = 1e-8
+    sim.atol = 1e-11
+    if(version.parse(ct.__version__) >= version.parse('2.5.0')):
+        sim.max_steps = 100000 
     #set the mass flow controllers according to phi and egr rate asked in the config
     mdots,mdot_tot = compute_mdots(config, egr_rate, phi)
     
@@ -403,8 +407,8 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr=False,vars=['E
             f.P = P
             f.inlet.X = X
         #print('Inlet composition',f.inlet.X)
-        flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr)
-
+        flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr,dry=dry,T_reinj=T_reinj)
+        flame.write_AVBP('Solution.csv')
 
         #restart_rate = egr
         if(version.parse(ct.__version__) >= version.parse('2.5.0')):

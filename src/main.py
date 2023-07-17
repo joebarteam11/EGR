@@ -11,7 +11,8 @@ if __name__ == '__main__':
 
     # get the start time
     st = time.time()
-    temptlist = [i for i in np.arange(1003,1800,50)]
+    temptlist = [300]#[i for i in np.arange(300,501,50)]
+    presslist = [100000] #[i for i in np.arange(1e5,5.1e5,5e4)]
     config = case('CH4:1.',                     #fuel compo
                   temptlist,                    #tin fuel
                   [10e5,18e5],                        #pin fuel
@@ -20,12 +21,13 @@ if __name__ == '__main__':
                   [10e5,18e5],                        #pin ox
                   'CO2:1.',                     #egr compo
                   temptlist,                    #tin egr
-                  [10e5,18e5],                        #pin egr
-                  [0],#[i for i in np.arange(0.80,1.22,0.05)],        #phi range
-                  [0.1,0.15,0.2],            #egr range
-                  'mole',                       #egr rate unit
-                  'gri30.cti',               #scheme
-                  'NA'  #is an ARC chemistry ? 'ARC' = yes, other = no
+                  presslist,                        #pin egr
+                  [0.85],#[i for i in np.arange(0.60,2.51,0.1)],        #phi range
+                  [0.3],#[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
+                  'mole',                       #egr rate unit mole / mass
+                  'schemes/CH4_16_250_10_QC.cti',               #path to scheme
+                  'Mix', #transport model
+                  'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
                  )
     
 
