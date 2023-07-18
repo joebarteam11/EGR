@@ -67,7 +67,7 @@ if __name__ == '__main__':
         items=[]
 
         
-    dim='0D'
+    dim='1D'
 
     if(dim=='equilibrate'):
         species = ['O2','CO','CO2']
