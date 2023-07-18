@@ -199,3 +199,18 @@ def slave_compute_and_communicate_0D(comm,items,real_egr,species):
     sends_msg_to_proc(comm,elapsed_time,0,4)
 
     return 
+
+
+def slave_compute_and_communicate_equilibrate(comm,items,species,results):
+    proc0=int(0)
+    # msg_to_print='I am rank '+str(myrank)+' my item is',str(items)
+    st = time.time() # Beginning of solving flame
+    results += [compute_equilibrium(*item,species) for item in items[:1]]
+    et = time.time() # End of solving flame
+    elapsed_time = et - st
+    msg_to_send='data'             
+    sends_msg_to_proc(comm,msg_to_send,proc0,1) # Tells proc0 that data is available to transfer
+    sends_msg_to_proc(comm,results,0,3) # Sends results to proc0 
+    sends_msg_to_proc(comm,elapsed_time,0,4)
+
+    return 
