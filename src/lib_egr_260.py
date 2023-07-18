@@ -271,8 +271,6 @@ def compute_equilibrium(config,phi,tin,pin,egr,species = ['CH4','H2','O2','CO','
     #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
     df =  pd.DataFrame(columns=['EGR','phi','T','P']+species)
     
-    # for egr in config.egr_range:
-    #     for phi in config.phi_range:
     _,config.gas.fuel = create_reservoir(config,config.compo.fuel, tin[0], pin[0])
     _,config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
     _,config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
@@ -295,8 +293,6 @@ def compute_solutions_0D(config,phi,tin,pin,egr,real_egr=False,species = ['CH4',
     if(version.parse(ct.__version__) >= version.parse("2.4.0")):
         print(('%10s %10s %10s %10s %10s %10s %10s %10s' % ('mdot_tot','phi','Xfuel', 'Xair', 'Xegr', 'HRR', 'T', 'P'))) 
 
-    # for egr in config.egr_range:
-    #     for phi in config.phi_range:
     config.res.fuel,config.gas.fuel = create_reservoir(config,config.compo.fuel, tin[0], pin[0])
     config.res.ox,config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
     config.res.egr,config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
@@ -421,68 +417,68 @@ def compute_solutions_1D(config,phi,tin,pin,restart_rate,real_egr,dry,T_reinj=No
     vartosave = vars+species
     df =  pd.DataFrame(columns=vartosave)
 
-    for egr in config.egr_range:
-        #create the gas object containing the mixture of fuel, ox and egr and all thermo data
-        _, config.gas.fuel = create_reservoir(config,config.compo.fuel,tin[0], pin[0])
-        _, config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
-        _, config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
 
-        #create a dataframe naming colums with 'phi', 'T' and all the species in the list
-        #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
-        #vartosave = vars+species
-        #df =  pd.DataFrame(columns=vartosave)
+    #create the gas object containing the mixture of fuel, ox and egr and all thermo data
+    _, config.gas.fuel = create_reservoir(config,config.compo.fuel,tin[0], pin[0])
+    _, config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
+    _, config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
 
-        #get the temperature and pressure of the mixture according to phi and egr rate
-        T,P,X = mixer(phi, config, egr)
-        f = build_freeflame(fresh_gas(phi,config,egr,T,P))
-        #print(f.transport_model)
-        tol_ss = [2.0e-7, 1.0e-7]  # tolerance [rtol atol] for steady-state problem
-        tol_ts = [2.0e-7, 1.0e-7]  # tolerance [rtol atol] for time stepping
+    #create a dataframe naming colums with 'phi', 'T' and all the species in the list
+    #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
+    #vartosave = vars+species
+    #df =  pd.DataFrame(columns=vartosave)
 
-        f.flame.set_steady_tolerances(default=tol_ss)
-        f.flame.set_transient_tolerances(default=tol_ts)
-        f.transport_model = config.transport
+    #get the temperature and pressure of the mixture according to phi and egr rate
+    T,P,X = mixer(phi, config, egr)
+    f = build_freeflame(fresh_gas(phi,config,egr,T,P))
+    #print(f.transport_model)
+    tol_ss = [2.0e-7, 1.0e-7]  # tolerance [rtol atol] for steady-state problem
+    tol_ts = [2.0e-7, 1.0e-7]  # tolerance [rtol atol] for time stepping
 
-        #print('flame X_CH4',f.inlet.thermo['CH4'].X)
-        #print(('%10s %10s %10s %10s %10s %10s' % ('phi','Xfuel', 'Xair', 'Xegr', 'T', 'P'))) 
-        #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
-        flametitle=''
-        if(restart_rate is None):
-            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
-            f.set_initial_guess()
-        else:
-            flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
-            try:
-                # f.read_hdf(flametitle)
-                a=1+1
-                #f.set_initial_guess(data=flametitle)
-            except:
-                raise Exception('Cannot restore flame from file '+flametitle)
-            flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
+    f.flame.set_steady_tolerances(default=tol_ss)
+    f.flame.set_transient_tolerances(default=tol_ts)
+    f.transport_model = config.transport
 
-        # print(f.X[:,-1])
-        # config.gas.egr.X = f.X[:,-1]
-        # _,_,X = mixer(phi,config,egr,real_egr=True)
-        # print('Inlet composition',X)
-        if(real_egr):
-            f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
-        else:
-            f.inlet.T = T
-            f.P = P
-            f.inlet.X = X
-        #print('Inlet composition',f.inlet.X)
-        flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr,dry=dry,T_reinj=T_reinj)
-        #flame.write_AVBP('solut_avbp.csv')
+    #print('flame X_CH4',f.inlet.thermo['CH4'].X)
+    #print(('%10s %10s %10s %10s %10s %10s' % ('phi','Xfuel', 'Xair', 'Xegr', 'T', 'P'))) 
+    #print(('%10.3f %10.3f %10.3f %10.3f %10.3f' % (phi, f['CH4'].X, f['O2'].X+f['N2'].X, f['CO2'].X, T, P)))
+    flametitle=''
+    if(restart_rate is None):
+        flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
+        f.set_initial_guess()
+    else:
+        flametitle = path+'/data/'+'egr'+str(round(restart_rate,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
+        try:
+            # f.read_hdf(flametitle)
+            a=1+1
+            #f.set_initial_guess(data=flametitle)
+        except:
+            raise Exception('Cannot restore flame from file '+flametitle)
+        flametitle = path+'/data/'+'egr'+str(round(egr,1))+'_phi'+str(round(phi,2))+'_T'+str(round(T,0))+'_P'+str(round(P/100000,0))+'_ARC_QC16.h5'
 
-        #restart_rate = egr
-        if(version.parse(ct.__version__) >= version.parse('2.5.0')):
-            SL0=f.velocity[0]
-        else:
-            SL0=f.u[0]
+    # print(f.X[:,-1])
+    # config.gas.egr.X = f.X[:,-1]
+    # _,_,X = mixer(phi,config,egr,real_egr=True)
+    # print('Inlet composition',X)
+    if(real_egr):
+        f = apply_egr_to_inlet(f,config,phi,egr,dry,T_reinj)
+    else:
+        f.inlet.T = T
+        f.P = P
+        f.inlet.X = X
+    #print('Inlet composition',f.inlet.X)
+    flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr,dry=dry,T_reinj=T_reinj)
+    #flame.write_AVBP('solut_avbp.csv')
 
-        index = [f.gas.species_index(specie) for specie in species]
-        df = pd.concat([df, pd.DataFrame([[egr, phi,1/phi, P, T, f.T[-1],SL0,flamme_thickness(f)]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
-        #dfs = pd.concat([df],axis=0)
+    #restart_rate = egr
+    if(version.parse(ct.__version__) >= version.parse('2.5.0')):
+        SL0=f.velocity[0]
+    else:
+        SL0=f.u[0]
+
+    index = [f.gas.species_index(specie) for specie in species]
+    df = pd.concat([df, pd.DataFrame([[egr, phi,1/phi, P, T, f.T[-1],SL0,flamme_thickness(f)]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+    #dfs = pd.concat([df],axis=0)
         
     return df
 
