@@ -217,7 +217,7 @@ def slave_compute_and_communicate_equilibrate(comm,items,species,results):
 
 
 
-def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,time_file,path):
+def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name):
     time_slower = 0
     results = []
     items_and_status, requests, itemtot, nb_of_started_flames, nb_of_finished_flames  = initialize_master_1D_flame(items,comm,ncpu)
@@ -242,13 +242,13 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,time_file,pa
 
         if nb_of_finished_flames> 0 and  nb_of_finished_flames%10==0 : # Every 10 itération, saves a intermediate result file
             output=pd.concat(results[:],axis=0) 
-            output.to_csv(path+'/BFER-For-ANSALDO'+'_'+time_file+'.csv',index=False)
+            output.to_csv(save_file_name,index=False)
             print("Partial results has been saved")
             sys.stdout.flush()
 
     # When calculation is finished, 
     output=pd.concat(results[:],axis=0) 
-    output.to_csv(path+'/BFER-For-ANSALDO'+'_'+time_file+'.csv',index=False) 
+    output.to_csv(save_file_name,index=False) 
     mpiprint(output)
     mpiprint(items_and_status.to_string())
 
@@ -270,12 +270,34 @@ def MPI_CALCULATION_SLAVE(comm,species,restart_rate,real_egr,dim):
                 slave_compute_and_communicate_1D(comm,items,restart_rate,real_egr,results=[])
         else:
             not_end=False
-def MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,time_file,path,species,dim,restart_rate,real_egr):
+def MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,species,dim,restart_rate,real_egr):
 
 
     if rank_0:
-        MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,time_file,path)
+        MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name)
     else:
         MPI_CALCULATION_SLAVE(comm,species,restart_rate,real_egr,dim)
 
     return
+
+
+def MONO_CPU_CALCULATION(items,species,save_file_name,dim,real_egr,restart_rate):
+    results = []
+    if dim=='equilibrate':
+        results = [compute_equilibrium(*item,species) for item in items]
+    elif dim=='0D':
+        reactor_and_df = [compute_solutions_0D(*item,real_egr,species) for item in items]
+        for i in range(len(items)):
+            results += [reactor_and_df[i][1]]
+    elif dim=='1D':
+        results = [compute_solutions_1D(*item,restart_rate,real_egr) for item in items]
+
+    output=pd.concat(results[:],axis=0) 
+    output.to_csv(save_file_name,index=False) 
+    mpiprint(output)
+
+def PRINT_MONO_CPU_WARNING():
+    for i in range(20):
+        mpiprint("--------------------------------------------------")
+        mpiprint("WARNING, I AM BETTER FOR PARALLEL MPI CALCULATIONS")
+        mpiprint("--------------------------------------------------")
