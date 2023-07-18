@@ -19,7 +19,6 @@ if ncpu == 1:
 
 if __name__ == '__main__':
 
-
     if rank_0:
         path = os.getcwd()
         mpiprint('Current folder: '+path)
