@@ -97,7 +97,7 @@ def update_priority(items_and_status,ncpu,nb_of_started_flames,time_slower):
             EGR=items[i][4]
             Phi=items[i][1]
             phi_distance_to_1=abs(Phi-1)
-            items_and_status.loc[i,'priority']=(items[i][3][1]/maxP + items[i][4]/maxEGR + items[i][2][1]/maxT + phi_distance_to_1/fartherPHI)/3
+            items_and_status.loc[i,'priority']=(items[i][3][1]/maxP + items[i][4]/(maxEGR+1e-16) + items[i][2][1]/maxT + phi_distance_to_1/(fartherPHI+1e-16) )/3
 
     elif nb_of_started_flames>ncpu: # For flames > ncpu priority is given to the flame that took the longest time to run and for flames that have similar global parameters
         idx_slower=items_and_status['time'].idxmax()
@@ -185,16 +185,17 @@ def slave_compute_and_communicate_1D(comm,items,restart_rate,real_egr,results):
 
     return 
 
-def slave_compute_and_communicate_0D(comm,items,real_egr,species,results):
+def slave_compute_and_communicate_0D(comm,items,real_egr,species):
     proc0=int(0)
     # msg_to_print='I am rank '+str(myrank)+' my item is',str(items)
     st = time.time() # Beginning of solving flame
-    results += [compute_solutions_0D(*item,real_egr,species) for item in items[:1]]
+    reactor_and_df = [compute_solutions_0D(*item,real_egr,species) for item in items[:1]]
+    results = reactor_and_df[0][1]
     et = time.time() # End of solving flame
     elapsed_time = et - st
     msg_to_send='data'             
     sends_msg_to_proc(comm,msg_to_send,proc0,1) # Tells proc0 that data is available to transfer
-    sends_msg_to_proc(comm,results,0,3) # Sends results to proc0 
+    sends_msg_to_proc(comm,[results],0,3) # Sends results to proc0 
     sends_msg_to_proc(comm,elapsed_time,0,4)
 
     return 

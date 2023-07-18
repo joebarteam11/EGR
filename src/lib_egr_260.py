@@ -211,9 +211,14 @@ def init_reservoirs_mdots(amont, mdots, aval):
 
 def edit_reservoirs_mdots(reactor,mdots):
     i=0
-    for inlet in reactor.inlets:
-        inlet.mass_flow_rate = mdots[i]
-        i+=1
+    if(version.parse(ct.__version__) >= version.parse("2.5.0")):
+        for inlet in reactor.inlets:
+            inlet.mass_flow_rate = mdots[i]
+            i+=1
+    else:
+        for inlet in reactor.inlets:
+            inlet.set_mass_flow_rate(mdots[i])
+            i+=1
 
 def reactor_0D(phi,config,egr_rate,real_egr,max_residence_time=1.0,steady_state_only=False):
     #create the reactor and fill it with burned gas to ignite the mixture

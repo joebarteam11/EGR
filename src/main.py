@@ -26,10 +26,10 @@ if __name__ == '__main__':
         mpiprint(f"Running Cantera version: {ct.__version__}")
         # get the start time
         st = time.time()
-        temptlist = [i for i in np.arange(290,505,100.0)]
+        temptlist = [i for i in np.arange(290,305,100.0)]
         presslist= [i for i in np.arange(1E5,1.4E5,0.2E5)]
         phirange = [i for i in np.arange(0.7,1.3,0.2)]
-        egrrange = [i for i in np.arange(0.0,0.3,0.2)]
+        egrrange = [i for i in np.arange(0.0,0.1,0.2)]
         config = case('CH4:1.',                     #fuel compo
                     temptlist,                    #tin fuel
                     presslist,                        #pin fuel
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         items=[]
 
         
-    dim='1D'
+    dim='0D'
 
     if(dim=='equilibrate'):
         species = ['O2','CO','CO2']
@@ -143,7 +143,7 @@ if __name__ == '__main__':
                 sends_msg_to_proc(comm,msg_to_send,proc0,1) # Tells proc0 that available
                 items=receive_msg_from_proc(comm,0,2) # receive from proc 0 items
                 if items is not None:
-                    slave_compute_and_communicate_0D(comm,items,real_egr,species,results=[])
+                    slave_compute_and_communicate_0D(comm,items,real_egr,species)
                 else:
                     not_end=False
 
@@ -181,6 +181,8 @@ if __name__ == '__main__':
 
                     items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu)
                     rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot)
+                    print(items_and_status.to_string())
+                    sys.stdout.flush()
 
 
                 # End of calculation for proc 0 
