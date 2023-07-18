@@ -13,8 +13,8 @@ module purge
 module load mpi/intelmpi/2018.1.163
 module load cantera/2.3_avbp_py395
 
-export CUSTOM_LIB=/scratch/cfd/elhachem/egr-git/EGR0D/schemes
+export CUSTOM_LIB=${SLURM_SUBMIT_DIR}/schemes
 export LD_LIBRARY_PATH=$CUSTOM_LIB:$LD_LIBRARY_PATH 
 
-mpirun -np $SLURM_NPROCS python3 /scratch/cfd/elhachem/egr-git2/EGR0D/src/main.py > output-opti-oti.out
+mpirun -np $SLURM_NPROCS python3 ${SLURM_SUBMIT_DIR}/src/main.py > output-opti-oti.out
 #python3 /home/cfd/theot/EGR0D/lib_egr_260.py > log_EGR1D.out
