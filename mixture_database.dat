@@ -15,4 +15,16 @@
  fuel_tank_composition = 0.0d0 0.d0 0.d0 0.d0 0.0d0 0.d0 0.d0 0.d0 0.d0 1.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 
  oxydizer_tank_composition = 0.0d0 0.d0 0.d0 0.233d0 0.0d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.767d0 
  
+ mixture_name = test
+ transport = computed
+ combustion_chemistry = analytic
+ species_name = H2 H O O2 OH H2O HO2 H2O2 CH3 CH4 CO CO2 CH2O C2H4 C2H6 N2 
+ species_Schmidt_number = 0.10489827d+00 0.77747836d-01 0.27139393d+00 0.44075675d+00 0.27677286d+00 0.60306876d+00 0.44402920d+00 0.44717521d+00 0.42696140d+00  0.42761452d+00  0.43884203d+00  0.69352857d+00 0.87066341d+00 0.70673140d+00 0.74528592d+00 0.43457066d+00  
+ viscosity_law = sutherland
+ mu_ref =   0.10940883d-04
+ T_ref =   0.30000000d+03
+ viscosity_law_coeff =   0.67590000d+00
+ prandtl_number =   0.71229580d+00
+ fuel_tank_composition = 0.0d0 0.d0 0.d0 0.d0 0.0d0 0.d0 0.d0 0.d0 0.d0 1.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 
+ oxydizer_tank_composition = 0.0d0 0.d0 0.d0 0.233d0 0.0d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.767d0 
  $end_MIXTURE

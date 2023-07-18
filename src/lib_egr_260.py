@@ -91,8 +91,8 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass',egr_def='%egr
     mol_weights=[mw_fuel,mw_oxidizer,mw_egr]
 
     warnings.warn('compute_mdots() is setted for methane-air mixtures only, change Sx, Sy and n_mole_ox for others reactants', UserWarning)
-    Sx=0.5 #2.0
-    Sy=34.32 #17.16
+    Sx=2.0
+    Sy=17.16
     n_mole_ox=4.76
 
 
@@ -174,7 +174,10 @@ def create_reservoir(config,content, T, P,scheme=None):
         ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
     if(scheme is None):
         scheme = config.scheme
-    gas = ct.Solution(scheme, transport_model=config.transport)
+    if(version.parse(ct.__version__) >= version.parse('2.5.0')):
+        gas=ct.Solution(config.scheme, transport_model=config.transport)
+    else:
+        gas=ct.Solution(config.scheme)
     gas.TPX = T, P, content
     return ct.Reservoir(gas), gas
 
@@ -182,7 +185,10 @@ def burned_gas(phi,config,egr_rate,ignition=True):
     if(config.isARC):
         #remove extension from sheme variable
         ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
-    gas = ct.Solution(config.scheme, transport_model=config.transport)
+    if(version.parse(ct.__version__) >= version.parse('2.5.0')):
+        gas=ct.Solution(config.scheme, transport_model=config.transport)
+    else:
+        gas=ct.Solution(config.scheme)
     gas.TP = config.gas.ox.T,config.gas.ox.P
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
         gas.set_equivalence_ratio(phi, config.compo.fuel, config.compo.ox,
@@ -334,7 +340,10 @@ def fresh_gas(phi,config,egr_rate,Tmix,Pmix):
     if(config.isARC):
         #remove extension from sheme variable
         ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
-    gas = ct.Solution(config.scheme, transport_model=config.transport)
+    if(version.parse(ct.__version__) >= version.parse('2.5.0')):
+        gas=ct.Solution(config.scheme, transport_model=config.transport)
+    else:
+        gas=ct.Solution(config.scheme)
     gas.TP = Tmix,Pmix
 
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
@@ -355,7 +364,10 @@ def mixer(phi,config,egr,real_egr=False,T_reinj=None):
     if(config.isARC):
         #remove extension from sheme variable
         ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
-    gas=ct.Solution(config.scheme, transport_model=config.transport)
+    if(version.parse(ct.__version__) >= version.parse('2.5.0')):
+        gas=ct.Solution(config.scheme, transport_model=config.transport)
+    else:
+        gas=ct.Solution(config.scheme)
     mdots,mdot_tot = compute_mdots(config, egr, phi,return_unit='mass')
 
     fuel = ct.Quantity(gas,constant='HP')
@@ -471,7 +483,8 @@ def compute_solutions_1D(config,phi,tin,pin,egr,restart_rate,real_egr,dry=False,
         f.inlet.X = X
     #print('Inlet composition',f.inlet.X)
     flame = solve_flame(f,flametitle,config,phi,egr,real_egr=real_egr,dry=dry,T_reinj=T_reinj)
-    #flame.write_AVBP('solut_avbp.csv')
+    if(version.parse(ct.__version__) == version.parse("2.3.0")):
+        flame.write_AVBP('solut_avbp.csv')
 
     #restart_rate = egr
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):

@@ -4,7 +4,7 @@
 
 units(length = "cm", time = "s", quantity = "mol", act_energy = "cal/mol")
 
-ideal_gas(name = "gas",
+ideal_gas(name = "test",
      elements = "H O C N",
      species = """ H2 H O O2 OH H2O HO2 H2O2 CH3 CH4 CO CO2 CH2O C2H4
                  C2H6 N2 """,

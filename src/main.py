@@ -35,7 +35,7 @@ if __name__ == '__main__':
                     egrrange,   #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                     'mole',                       #egr rate unit mole / mass
                     'schemes/CH4_16_250_10_QC.cti',               #path to scheme
-                    'Mix', #transport model
+                    'AVBP', #transport model
                     'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
                     )
         
