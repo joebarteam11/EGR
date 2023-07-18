@@ -180,8 +180,8 @@ if __name__ == '__main__':
 
                     items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu)
                     rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot)
-                    print(items_and_status.to_string())
-                    sys.stdout.flush()
+                    # print(items_and_status.to_string())
+                    # sys.stdout.flush()
 
 
                 # End of calculation for proc 0 
