@@ -18,8 +18,8 @@ if __name__ == '__main__':
         mpiprint(f"Running Cantera version: {ct.__version__}")
         # get the start time
         st = time.time()
-        temptlist = [i for i in np.arange(290,305,100.0)]
-        presslist= [i for i in np.arange(1E5,1.4E5,0.2E5)]
+        temptlist = [i for i in np.arange(290,305,50.0)]
+        presslist= [i for i in np.arange(1E5,1.4E5,0.1E5)]
         phirange = [i for i in np.arange(0.9,1.3,0.1)]
         egrrange = [i for i in np.arange(0.0,0.1,0.2)]
         config = case('CH4:1.',                     #fuel compo
