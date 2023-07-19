@@ -17,10 +17,10 @@ class FlameExtinguished(Exception):
     pass
 
 class case:
-    def __init__(self,fuel,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,egr_range,egr_unit,scheme,transport,isARC):
-        self.compo = self.Compo(fuel,ox,egr)
+    def __init__(self,fuels,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,fuelblend_range,egr_range,fuelblend_unit,egr_unit,scheme,transport,isARC):
+        self.compo = self.Compo(fuels,ox,egr)
         self.res = self.Reservoirs()
-        self.gas = self.Gas(fuel,ox,egr)
+        self.gas = self.Gas(fuels,ox,egr)
         
         #try:
         if(len(Tinit_fuel) != len(Tinit_ox) or len(Tinit_fuel) != len(Tinit_egr)):
@@ -38,27 +38,29 @@ class case:
         #    raise ValueError('length of Pinit_fuel, Pinit_ox, Pinit_egr must be equal')
         
         self.phi_range = phi_range
+        self.fuelblend_range = fuelblend_range
         self.egr_range = egr_range
+        self.fuelblend_unit = fuelblend_unit
         self.egr_unit = egr_unit
         self.scheme = scheme
         self.transport = transport
         self.isARC = True if isARC == 'ARC' else False
 
     class Gas:
-        def __init__(self,fuel,ox,egr):
-            self.fuel = fuel
+        def __init__(self,fuels,ox,egr):
+            self.fuels = fuels
             self.ox = ox
             self.egr = egr
 
     class Compo:
-        def __init__(self,fuel,ox,egr):
-            self.fuel = fuel
+        def __init__(self,fuels,ox,egr):
+            self.fuels = fuels
             self.ox = ox
             self.egr = egr
     
     class Reservoirs:
         def __init__(self):
-            self.fuel = None
+            self.fuels = None
             self.ox = None
             self.egr = None
     
@@ -85,7 +87,7 @@ class case:
             yield self.egr
 
 def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass',egr_def='%egr/%ox'): 
-    mw_fuel = config.gas.fuel.mean_molecular_weight/1000 #kg/mol
+    mw_fuel = config.gas.fuels.mean_molecular_weight/1000 #kg/mol
     mw_oxidizer = config.gas.ox.mean_molecular_weight/1000 #kg/mol
     mw_egr = config.gas.egr.mean_molecular_weight/1000 #kg/mol
     mol_weights=[mw_fuel,mw_oxidizer,mw_egr]
@@ -144,7 +146,7 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass',egr_def='%egr
     elif(config.egr_unit=='vol'):
         coef=coef/1000
         fuel_mol = phi/(n_mole_ox*Sx+phi)
-        fuel_vol = fuel_mol * config.gas.fuel.volume_mole
+        fuel_vol = fuel_mol * config.gas.fuels.volume_mole
         air_vol = (1-fuel_mol) * config.gas.ox.volume_mole
 
         if(egr_def=='%egr/%ox'):
@@ -155,7 +157,7 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass',egr_def='%egr
             egr_comparison=air_vol+fuel_vol
 
         egr_vol=(egr_rate/(1-egr_rate))*(egr_comparison) #+fuel_vol depending on the definition you want
-        mdots=[fuel_vol*coef*config.gas.fuel.density_mass, air_vol*coef*config.gas.ox.density_mass, egr_vol*coef*config.gas.egr.density_mass]
+        mdots=[fuel_vol*coef*config.gas.fuels.density_mass, air_vol*coef*config.gas.ox.density_mass, egr_vol*coef*config.gas.egr.density_mass]
         
         if(return_unit=='mass'):
             return mdots, sum(mdots)
@@ -167,19 +169,62 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass',egr_def='%egr
     else:
         raise ValueError('egr_unit must be mass, mole or vol')
     
-def create_reservoir(config,content, T, P,scheme=None):
+def create_reservoir(config,content, T, P,blend_ratio=None,scheme=None):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     if(config.isARC):
-        #remove extension from sheme variable
+        #replace extension from scheme variable
         ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
+        
     if(scheme is None):
         scheme = config.scheme
+        
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
-        gas=ct.Solution(config.scheme, transport_model=config.transport)
+        gas=ct.Solution(scheme, transport_model=config.transport)
     else:
-        gas=ct.Solution(config.scheme)
-    gas.TPX = T, P, content
-    return ct.Reservoir(gas), gas
+        gas=ct.Solution(scheme)
+
+    if type(content) is not list and blend_ratio is None:
+        gas.TPX = T, P, content
+        return ct.Reservoir(gas), gas
+    
+    elif type(content) is list and blend_ratio is None:
+        raise ValueError('blend_ratio must be set if content is a list')
+
+    elif type(content) is list and blend_ratio < 0.00001 :
+        gas.TPX = T, P, content[0]
+        return ct.Reservoir(gas), gas
+    
+    elif len(content) <= 2 and blend_ratio > 0.00001:
+        if(config.fuelblend_unit == 'mole'):
+            mixed_content = ""
+            for i,cont in enumerate(content):
+                splited_content = cont.split(':')
+                if(i==0):
+                    mixed_content += (splited_content[0]+':'+str(float(splited_content[1])*(1-blend_ratio))+' ')
+                else:    
+                    mixed_content += (splited_content[0]+':'+str(float(splited_content[1])*(blend_ratio)))
+            config.compo.fuel = mixed_content
+            gas.TPX = T, P, config.compo.fuel
+
+        elif(config.fuelblend_unit == 'mass'):
+            mixed_content = ""
+            for i,cont in enumerate(content):
+                splited_content = cont.split(':')
+                if(i==0):
+                    mixed_content += (splited_content[0]+':'+str(float(splited_content[1])*(1-blend_ratio)))
+                else:    
+                    mixed_content += (splited_content[0]+':'+str(float(splited_content[1])*(blend_ratio)))
+            config.compo.fuel = mixed_content
+            gas.TPY = T, P, config.compo.fuel
+
+
+        else:
+            raise ValueError('fuelblend_unit must be "mass" or "mole"')
+
+        return ct.Reservoir(gas), gas
+    
+    else:
+        raise ValueError('Only two streams can be mixed in varaying proportions (but each stream can be a mixture)')
 
 def burned_gas(phi,config,egr_rate,ignition=True):
     if(config.isARC):
@@ -279,7 +324,7 @@ def compute_equilibrium(config,phi,tin,pin,egr,species = ['CH4','H2','O2','CO','
     
     # for egr in config.egr_range:
     #     for phi in config.phi_range:
-    _,config.gas.fuel = create_reservoir(config,config.compo.fuel, tin[0], pin[0])
+    _,config.gas.fuels = create_reservoir(config,config.compo.fuels, tin[0], pin[0],blend_ratio=0.1)
     _,config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
     _,config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
             
@@ -303,18 +348,18 @@ def compute_solutions_0D(config,phi,tin,pin,egr,real_egr=False,species = ['CH4',
 
     # for egr in config.egr_range:
     #     for phi in config.phi_range:
-    config.res.fuel,config.gas.fuel = create_reservoir(config,config.compo.fuel, tin[0], pin[0])
+    config.res.fuel,config.gas.fuels = create_reservoir(config,config.compo.fuels, tin[0], pin[0],blend_ratio=0.1)
     config.res.ox,config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
     config.res.egr,config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
     
     mfcs, mdot_tot, reactor, states = reactor_0D(phi,config,egr,real_egr,res_time,steady_state_only=False)
     #only with cantera >= 2.5
     if(version.parse(ct.__version__) >= version.parse("2.4.0")):
-        moldot_tot = mfcs[0].mass_flow_rate/(config.gas.fuel.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.gas.ox.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.gas.egr.mean_molecular_weight/1000)
+        moldot_tot = mfcs[0].mass_flow_rate/(config.gas.fuels.mean_molecular_weight/1000)+ mfcs[1].mass_flow_rate/(config.gas.ox.mean_molecular_weight/1000)+mfcs[2].mass_flow_rate/(config.gas.egr.mean_molecular_weight/1000)
         #print(('%10.3f %10.3f %10.3f %10.3e %10.3f %10.3f' % (mfcs[0].mass_flow_rate/mdot_tot, mfcs[1].mass_flow_rate/mdot_tot, (mfcs[2].mass_flow_rate/mdot_tot), reactor.thermo.heat_release_rate, reactor.T, reactor.thermo.P)))
         print((' %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f' % (mdot_tot,phi, #reactor.thermo['CH4'].X, reactor.thermo['O2'].X+reactor.thermo['N2'].X, reactor.thermo['CO2'].X,
                                                             #only with cantera >= 2.5
-                                                            (mfcs[0].mass_flow_rate/(config.gas.fuel.mean_molecular_weight/1000))/moldot_tot,
+                                                            (mfcs[0].mass_flow_rate/(config.gas.fuels.mean_molecular_weight/1000))/moldot_tot,
                                                             (mfcs[1].mass_flow_rate/(config.gas.ox.mean_molecular_weight/1000))/moldot_tot, 
                                                             (mfcs[2].mass_flow_rate/(config.gas.egr.mean_molecular_weight/1000))/moldot_tot, 
                                                             reactor.thermo.heat_release_rate, #only with cantera >= 2.5
@@ -371,7 +416,7 @@ def mixer(phi,config,egr,real_egr=False,T_reinj=None):
     mdots,mdot_tot = compute_mdots(config, egr, phi,return_unit='mass')
 
     fuel = ct.Quantity(gas,constant='HP')
-    fuel.TPX = config.gas.fuel.T,config.gas.fuel.P,config.compo.fuel
+    fuel.TPX = config.gas.fuels.T,config.gas.fuels.P,config.compo.fuel
     fuel.mass = mdots[0]/mdot_tot
     ox = ct.Quantity(gas,constant='HP')
     ox.TPX = config.gas.ox.T,config.gas.ox.P,config.compo.ox
@@ -434,7 +479,7 @@ def compute_solutions_1D(config,phi,tin,pin,egr,restart_rate,real_egr,dry=False,
     df =  pd.DataFrame(columns=vartosave)
 
     #create the gas object containing the mixture of fuel, ox and egr and all thermo data
-    _, config.gas.fuel = create_reservoir(config,config.compo.fuel,tin[0], pin[0])
+    _, config.gas.fuels = create_reservoir(config,config.compo.fuels,tin[0], pin[0],blend_ratio=0.1)
     _, config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
     _, config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
 
@@ -794,7 +839,7 @@ if __name__ == '__main__':
         dfs=[]
         for p in Pins:
             #set reservoirs thermo-state
-            config.res.fuel,config.gas.fuel = create_reservoir(config,config.compo.fuel, 300.0, p[0])
+            config.res.fuel,config.gas.fuels = create_reservoir(config,config.compo.fuels, 300.0, p[0])
             config.res.ox,config.gas.ox = create_reservoir(config,config.compo.ox, 300.0, p[1],scheme='air.xml')
             config.res.egr,config.gas.egr = create_reservoir(config,config.compo.egr, 300.0, p[2])
 
