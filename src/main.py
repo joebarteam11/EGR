@@ -1,6 +1,4 @@
-from lib_egr_260 import * #(compute_equilibrium,compute_solutions_0D,compute_solutions_1D)
 import time
-import pandas as pd
 from mpi_func import *
 
 
@@ -87,5 +85,3 @@ if __name__ == '__main__':
         print('Execution time:', elapsed_time, 'seconds')
         sys.stdout.flush()
         MPI.COMM_WORLD.Abort(0)
-
-
