@@ -91,8 +91,8 @@ def compute_mdots(config,egr_rate,phi,coef=50.0,return_unit='mass',egr_def='%egr
     mol_weights=[mw_fuel,mw_oxidizer,mw_egr]
 
     warnings.warn('compute_mdots() is setted for methane-air mixtures only, change Sx, Sy and n_mole_ox for others reactants', UserWarning)
-    Sx=0.5 #2.0
-    Sy=34.32 #17.16
+    Sx=2.0
+    Sy=17.16
     n_mole_ox=4.76
 
 
