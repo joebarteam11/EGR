@@ -15,16 +15,34 @@
  fuel_tank_composition = 0.0d0 0.d0 0.d0 0.d0 0.0d0 0.d0 0.d0 0.d0 0.d0 1.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 
  oxydizer_tank_composition = 0.0d0 0.d0 0.d0 0.233d0 0.0d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.767d0 
  
- mixture_name = test
+ !--------------------------------------------------------------------------------------------------
+ ! Analytical Scheme for methane/air combustion
+ !--------------------------------------------------------------------------------------------------
+ mixture_name = CH4_18_444_12_DL
  transport = computed
  combustion_chemistry = analytic
- species_name = H2 H O O2 OH H2O HO2 H2O2 CH3 CH4 CO CO2 CH2O C2H4 C2H6 N2 
- species_Schmidt_number = 0.10489827d+00 0.77747836d-01 0.27139393d+00 0.44075675d+00 0.27677286d+00 0.60306876d+00 0.44402920d+00 0.44717521d+00 0.42696140d+00  0.42761452d+00  0.43884203d+00  0.69352857d+00 0.87066341d+00 0.70673140d+00 0.74528592d+00 0.43457066d+00  
- viscosity_law = sutherland
- mu_ref =   0.10940883d-04
- T_ref =   0.30000000d+03
- viscosity_law_coeff =   0.67590000d+00
- prandtl_number =   0.71229580d+00
- fuel_tank_composition = 0.0d0 0.d0 0.d0 0.d0 0.0d0 0.d0 0.d0 0.d0 0.d0 1.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 
- oxydizer_tank_composition = 0.0d0 0.d0 0.d0 0.233d0 0.0d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.d0 0.767d0 
+ species_name =  N2 H2 H O2 O H2O OH H2O2 HO2 CO CO2 CH4 CH3 CH3OH CH2O C2H6 C2H4 C2H2
+ species_Schmidt_number =   7.51994166d-01 2.09464481d-01 1.25719630d-01 7.48806951d-01 4.87942119d-01 5.54258098d-01 4.97215471d-01 7.59070241d-01 7.53959515d-01 7.60472719d-01 9.57924396d-01 6.88320219d-01 6.85315896d-01 8.89861760d-01 8.70112201d-01 1.00614942d00 7.82346450d-01 8.25659705d-01
+ viscosity_law = power
+ mu_ref =   7.02748126d-05
+ T_ref =   2.20038197d03
+ viscosity_law_coeff =  6.42864939d-01
+ prandtl_number =   6.90341726d-01
+
+ !--------------------------------------------------------------------------------------------------
+ ! Analytical Scheme for methane/air combustion
+ !--------------------------------------------------------------------------------------------------
+ mixture_name = CH4_15_256_9_AP
+ transport = computed
+ combustion_chemistry = analytic
+ species_name =  N2 H2 H O2 O H2O OH CO CO2 CH4 CH3 CH2O C2H6 C2H2 CH2(L1)
+ species_Schmidt_number =   7.70952096d-01 2.10201098d-01 1.27177177d-01 7.52635621d-01 4.91012677d-01 5.58323416d-01 5.00320676d-01 7.64783218d-01 9.59095803d-01 6.92886741d-01 6.89940697d-01 8.75196157d-01 1.01185240d00 8.30473876d-01 6.74688883d-01
+ viscosity_law = power
+ mu_ref =   6.86681924d-05
+ T_ref =   2.13150682d03
+ viscosity_law_coeff =  6.43369577d-01
+ prandtl_number =   6.74171274d-01
+ fuel_tank_composition =  0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 1.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00
+ oxydizer_tank_composition =  7.67082999d-01 0.00000000d00 0.00000000d00 2.32917001d-01 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00 0.00000000d00
+
  $end_MIXTURE

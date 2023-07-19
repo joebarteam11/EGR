@@ -34,7 +34,7 @@ if __name__ == '__main__':
                     phirange,   #[i for i in np.arange(0.60,2.51,0.1)],        #phi range
                     egrrange,   #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                     'mole',                       #egr rate unit mole / mass
-                    'schemes/CH4_16_250_10_QC.cti',               #path to scheme
+                    'schemes/CH4_15_256_9_AP.cti',               #path to scheme
                     'AVBP', #transport model
                     'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
                     )
