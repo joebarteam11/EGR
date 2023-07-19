@@ -28,8 +28,9 @@ if __name__ == '__main__':
         temptlist = [i for i in np.arange(290,305,100.0)]
         presslist= [i for i in np.arange(1E5,1.4E5,0.2E5)]
         phirange = [i for i in np.arange(0.7,1.3,0.2)]
+        fuelblendrange = [i for i in np.arange(0.0,0.1,0.2)]
         egrrange = [i for i in np.arange(0.0,0.1,0.2)]
-        config = case('CH4:1.',                     #fuel compo
+        config = case(['CH4:1.','H2:1'],                     #fuel compo
                     temptlist,                    #tin fuel
                     presslist,                        #pin fuel
                     'O2:1. N2:3.76',              #ox compo
@@ -39,7 +40,9 @@ if __name__ == '__main__':
                     temptlist,                    #tin egr
                     presslist,                        #pin egr
                     phirange,   #[i for i in np.arange(0.60,2.51,0.1)],        #phi range
+                    fuelblendrange,
                     egrrange,   #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
+                    'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
                     'schemes/CH4_16_250_10_QC.cti',               #path to scheme
                     'Mix', #transport model
@@ -67,7 +70,7 @@ if __name__ == '__main__':
         items=[]
 
         
-    dim='1D'
+    dim='0D'
 
     if(dim=='equilibrate'):
         species = ['O2','CO','CO2']
