@@ -199,3 +199,108 @@ def slave_compute_and_communicate_0D(comm,items,real_egr,species):
     sends_msg_to_proc(comm,elapsed_time,0,4)
 
     return 
+
+
+def slave_compute_and_communicate_equilibrate(comm,items,species,results):
+    proc0=int(0)
+    # msg_to_print='I am rank '+str(myrank)+' my item is',str(items)
+    st = time.time() # Beginning of solving flame
+    results += [compute_equilibrium(*item,species) for item in items[:1]]
+    et = time.time() # End of solving flame
+    elapsed_time = et - st
+    msg_to_send='data'             
+    sends_msg_to_proc(comm,msg_to_send,proc0,1) # Tells proc0 that data is available to transfer
+    sends_msg_to_proc(comm,results,0,3) # Sends results to proc0 
+    sends_msg_to_proc(comm,elapsed_time,0,4)
+
+    return 
+
+
+
+def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name):
+    time_slower = 0
+    results = []
+    items_and_status, requests, itemtot, nb_of_started_flames, nb_of_finished_flames  = initialize_master_1D_flame(items,comm,ncpu)
+
+    while itemtot!=nb_of_finished_flames:  # While calculation is not finished : 
+        intention,talking_to_cpu=receive_intention_from_slave(requests) # Receive intention from slaves
+
+
+        if optimise_mpi_flame_order: # if use decided, 'optimise' calculation order
+            items_and_status,time_slower=update_priority(items_and_status,ncpu,nb_of_started_flames,time_slower)     
+
+        if intention=='data': # If slave has data to send to master,      
+            items_and_status = master_intention_is_data(comm,talking_to_cpu,items_and_status,results) # Receive this data, 
+
+        if intention=='available': # If slave is ready for a calculation, 
+            items_and_status = master_intention_is_available(comm,items_and_status,talking_to_cpu,itemtot,nb_of_started_flames) # Send next calculation to do
+
+
+        items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu) # Update calculations status
+        rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot) # Prints calculation status
+
+
+        if nb_of_finished_flames> 0 and  nb_of_finished_flames%10==0 : # Every 10 itération, saves a intermediate result file
+            output=pd.concat(results[:],axis=0) 
+            output.to_csv(save_file_name,index=False)
+            mpiprint("Partial results has been saved")
+            mpiprint(items_and_status.to_string())
+
+    # When calculation is finished, 
+    output=pd.concat(results[:],axis=0) 
+    output.to_csv(save_file_name,index=False) 
+    mpiprint(output)
+    mpiprint(items_and_status.to_string())
+
+    return 
+
+def MPI_CALCULATION_SLAVE(comm,species,restart_rate,real_egr,dim):
+    proc0=int(0)
+    not_end = True
+    while not_end:
+        msg_to_send='available'
+        sends_msg_to_proc(comm,msg_to_send,proc0,1) # Tells proc0 that available
+        items=receive_msg_from_proc(comm,0,2) # receive from proc 0 items
+        if items is not None:
+            if dim=='equilibrate':
+                slave_compute_and_communicate_equilibrate(comm,items,species,results=[])
+            elif dim=='0D':
+                slave_compute_and_communicate_0D(comm,items,real_egr,species)
+            elif dim=='1D':
+                slave_compute_and_communicate_1D(comm,items,restart_rate,real_egr,results=[])
+        else:
+            not_end=False
+def MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,species,dim,restart_rate,real_egr):
+
+
+    if rank_0:
+        MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name)
+    else:
+        MPI_CALCULATION_SLAVE(comm,species,restart_rate,real_egr,dim)
+
+    return
+
+
+def MONO_CPU_CALCULATION(items,species,save_file_name,dim,real_egr,restart_rate):
+    results = []
+    if dim=='equilibrate':
+        results = [compute_equilibrium(*item,species) for item in items]
+    elif dim=='0D':
+        reactor_and_df = [compute_solutions_0D(*item,real_egr,species) for item in items]
+        for i in range(len(items)):
+            results += [reactor_and_df[i][1]]
+    elif dim=='1D':
+        results = [compute_solutions_1D(*item,restart_rate,real_egr) for item in items]
+
+    output=pd.concat(results[:],axis=0) 
+    output.to_csv(save_file_name,index=False) 
+    mpiprint(output)
+
+
+
+
+def PRINT_MONO_CPU_WARNING():
+    for i in range(20):
+        mpiprint("--------------------------------------------------")
+        mpiprint("WARNING, I AM BETTER FOR PARALLEL MPI CALCULATIONS")
+        mpiprint("--------------------------------------------------")
