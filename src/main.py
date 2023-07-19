@@ -22,7 +22,7 @@ if __name__ == '__main__':
         temptlist = [i for i in np.arange(290,305,100.0)]
         presslist= [i for i in np.arange(1E5,1.4E5,0.2E5)]
         phirange = [i for i in np.arange(0.7,1.3,0.2)]
-        fuelblendrange = [i for i in np.arange(0.0,0.1,0.2)]
+        fuelblendrange = [i for i in np.arange(0.0,0.3,0.1)]
         egrrange = [i for i in np.arange(0.0,0.1,0.2)]
         config = case(['CH4:1.','H2:1'],                     #fuel compo
                     temptlist,                    #tin fuel
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         Tins = [[t[i] for t in config.tin] for i in range(len(config.tin.fuel))]
         Pins = [[p[i] for p in config.pin] for i in range(len(config.pin.fuel))]
         
-        items = [[config,phi,Tin,Pin,EGR] for phi in config.phi_range for EGR in config.egr_range for Tin in Tins for Pin in Pins ]
+        items = [[config,phi,Tin,Pin,EGR,FB] for phi in config.phi_range for EGR in config.egr_range for FB in config.fuelblend_range for Tin in Tins for Pin in Pins ]
         #print(items)
 
         # Get start time for intermediate result saving

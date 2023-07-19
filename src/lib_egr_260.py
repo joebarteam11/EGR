@@ -183,15 +183,19 @@ def create_reservoir(config,content, T, P,blend_ratio=None,scheme=None):
     else:
         gas=ct.Solution(scheme)
 
-    if type(content) is not list and blend_ratio is None:
+    if type(content) is not list :
         gas.TPX = T, P, content
         return ct.Reservoir(gas), gas
     
     elif type(content) is list and blend_ratio is None:
         raise ValueError('blend_ratio must be set if content is a list')
+    
+    # elif type(content) is not list and blend_ratio is not None:
+    #     raise ValueError('content must be a list if blend_ratio is set')
 
     elif type(content) is list and blend_ratio < 0.00001 :
-        gas.TPX = T, P, content[0]
+        config.compo.fuel = content[0]
+        gas.TPX = T, P, config.compo.fuel
         return ct.Reservoir(gas), gas
     
     elif len(content) <= 2 and blend_ratio > 0.00001:
@@ -317,20 +321,20 @@ def reactor_0D(phi,config,egr_rate,real_egr,max_residence_time=1.0,steady_state_
         states.append(reactor.thermo.state, tres=t)
     return mfcs, mdot_tot, reactor, states
 
-def compute_equilibrium(config,phi,tin,pin,egr,species = ['CH4','H2','O2','CO','CO2','H2O']):
+def compute_equilibrium(config,phi,tin,pin,egr,fb,species = ['CH4','H2','O2','CO','CO2','H2O']):
     #create a dataframe naming colums with 'phi', 'T' and all the species in the list
     #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
-    df =  pd.DataFrame(columns=['EGR','phi','T','P']+species)
+    df =  pd.DataFrame(columns=['EGR','FB','phi','T','P']+species)
     
     # for egr in config.egr_range:
     #     for phi in config.phi_range:
-    _,config.gas.fuels = create_reservoir(config,config.compo.fuels, tin[0], pin[0],blend_ratio=0.1)
+    _,config.gas.fuels = create_reservoir(config,config.compo.fuels, tin[0], pin[0],blend_ratio=fb)
     _,config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
     _,config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
             
     bg = burned_gas(phi,config,egr,ignition=True)
     
-    df = pd.concat([df, pd.DataFrame([[egr, phi, bg.T, bg.P]+list(bg[species].X)], columns=['EGR','phi','T','P']+species)]).astype(float)
+    df = pd.concat([df, pd.DataFrame([[egr,fb, phi, bg.T, bg.P]+list(bg[species].X)], columns=['EGR','FB','phi','T','P']+species)]).astype(float)
     try:
         update()
     except:
@@ -339,16 +343,16 @@ def compute_equilibrium(config,phi,tin,pin,egr,species = ['CH4','H2','O2','CO','
     return df
 
 
-def compute_solutions_0D(config,phi,tin,pin,egr,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O'],res_time=1.0):
+def compute_solutions_0D(config,phi,tin,pin,egr,fb,real_egr=False,species = ['CH4','H2','O2','CO','CO2','H2O'],res_time=1.0):
     #create a dataframe naming colums with 'phi', 'T' and all the species in the list
     #then fill it with the values of phi, T and mole fractions of species using the concatenation of two dataframes, for each phi
-    df =  pd.DataFrame(columns=['tres','EGR','phi','T','P']+species)
+    df =  pd.DataFrame(columns=['tres','EGR','FB','phi','T','P']+species)
     if(version.parse(ct.__version__) >= version.parse("2.4.0")):
         print(('%10s %10s %10s %10s %10s %10s %10s %10s' % ('mdot_tot','phi','Xfuel', 'Xair', 'Xegr', 'HRR', 'T', 'P'))) 
 
     # for egr in config.egr_range:
     #     for phi in config.phi_range:
-    config.res.fuel,config.gas.fuels = create_reservoir(config,config.compo.fuels, tin[0], pin[0],blend_ratio=0.1)
+    config.res.fuel,config.gas.fuels = create_reservoir(config,config.compo.fuels, tin[0], pin[0],blend_ratio=fb)
     config.res.ox,config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
     config.res.egr,config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
     
@@ -370,9 +374,9 @@ def compute_solutions_0D(config,phi,tin,pin,egr,real_egr=False,species = ['CH4',
     if(states is not None):
         index = [reactor.thermo.species_index(specie) for specie in species]
         for i in range(len(states.tres)):
-            df = pd.concat([df, pd.DataFrame([[states.tres[i]]+[egr, phi, states.T[i], reactor.thermo.P]+list(states.X[i,index])], columns=['tres']+['EGR','phi','T','P']+species)]).astype(float)
+            df = pd.concat([df, pd.DataFrame([[states.tres[i]]+[egr,fb, phi, states.T[i], reactor.thermo.P]+list(states.X[i,index])], columns=['tres']+['EGR','FB','phi','T','P']+species)]).astype(float)
     else:
-        df = pd.concat([df, pd.DataFrame([[egr, phi, reactor.T, reactor.thermo.P]+list(reactor.thermo[species].X)], columns=['EGR','phi','T','P']+species)]).astype(float)
+        df = pd.concat([df, pd.DataFrame([[egr,fb, phi, reactor.T, reactor.thermo.P]+list(reactor.thermo[species].X)], columns=['EGR','FB','phi','T','P']+species)]).astype(float)
 
     try:
         update()
@@ -472,14 +476,14 @@ def flamme_thickness(f):
     #print('Thicknes (m)',thickness)
     return thickness
 
-def compute_solutions_1D(config,phi,tin,pin,egr,restart_rate,real_egr,dry=False,T_reinj=None,species = ['CH4','O2','CO2','H2O'],vars=['EGR','phi','AF','P','Tin','T','u','dF']):
+def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=False,T_reinj=None,species = ['CH4','O2','CO2','H2O'],vars=['EGR','FB','phi','AF','P','Tin','T','u','dF']):
     path = os.getcwd()+'/src'
     dfs=[]
     vartosave = vars+species
     df =  pd.DataFrame(columns=vartosave)
 
     #create the gas object containing the mixture of fuel, ox and egr and all thermo data
-    _, config.gas.fuels = create_reservoir(config,config.compo.fuels,tin[0], pin[0],blend_ratio=0.1)
+    _, config.gas.fuels = create_reservoir(config,config.compo.fuels,tin[0], pin[0],blend_ratio=fb)
     _, config.gas.ox = create_reservoir(config,config.compo.ox, tin[1], pin[1],scheme='air.xml')
     _, config.gas.egr = create_reservoir(config,config.compo.egr, tin[2], pin[2])
 
@@ -538,7 +542,7 @@ def compute_solutions_1D(config,phi,tin,pin,egr,restart_rate,real_egr,dry=False,
         SL0=f.u[0]
 
     index = [f.gas.species_index(specie) for specie in species]
-    df = pd.concat([df, pd.DataFrame([[egr, phi,1/phi, P, T, f.T[-1],SL0,flamme_thickness(f)]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, f.T[-1],SL0,flamme_thickness(f)]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
     #dfs = pd.concat([df],axis=0)
         
     return df
