@@ -1,33 +1,28 @@
 import sys,os
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerLine2D
 import matplotlib 
+import numpy as np
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 path = os.getcwd()
 
-from lib_egr_260 import show_graphs
+#from lib_egr_260 import show_graphs
 print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
-    #'plan_total_dilution_BFERUNITY_20230417-174627.csv',
-    'CRASHTEST_20230608-164516.csv',
-    # 'plan_partiel_dilution_0.0_20230406-120038.csv',
-    # 'plan_partiel_dilution_0.1_20230406-131614.csv',
-    # 'plan_partiel_dilution_0.3_20230406-201540.csv',
-    # 'plan_partiel_dilution_0.5_20230407-121510.csv',
+    '/CH4_16_250_10_QC.csv',
+    '/CH4_18_444_12_DL.csv',
+    #'/CH4_15_256_9_AP.csv',
 ]
-files=[path+'/results/'+file for file in files]
+files=[path+
+       #'/EGR0D'+
+       file for file in files]
 
-inputs=pd.concat([pd.read_csv(file).round({'P':1,'EGR':1,'phi':2}) for file in files])
-papier=pd.read_csv(path+'/results/'+'plan_total_QC_22_ARC_canavbp_20230419-145236.csv',delimiter=',').round({
-                                                                                'P':1,
-                                                                                'EGR':1,
-                                                                                'phi':2,
-                                                                                })
-#papier=pd.read_csv(path+'/plan_total_dilution_BFERUNITY_20230412-170317.csv').round({'P':1,'EGR':1,'phi':2})
-#print(input)
+inputs=[pd.read_csv(file).round({'P':1,'EGR':1,'FB':1,'phi':2}) for file in files]
+
 
 var_to_plot=['dF',
              'u',
@@ -42,89 +37,54 @@ titles = ['Flame thickness',
           'Adiabatic flame temperature',
          ]
 
-mech=['Aramco1.3','ARC (QC)']
-colors=['b','r','g','k','m','c','y']
-for idx,var in enumerate(var_to_plot):
+mech=[#'Polimi',
+      'ARC(QC16)',
+      'ARC(DL)',
+      #'ARC(AP)',
+      ]
+symbols = ['o-','x-','s-',]
 
+
+
+# for each mech (i.e. each input in inputs) and each variable in var to plot, plot one graph with phi as x axis and the variable as y axis
+# each couple of EGR and FB (fuel blend) is a subplot
+for i,var in enumerate(var_to_plot):
+    fig,ax=plt.subplots(1,1,figsize=(10,10))
     
-    for i in range(2):
-        mydata=inputs.pivot_table(index='phi',columns=['P','EGR',],values=var)
-        try:
-            paper=papier.pivot_table(index='phi',columns=['P','EGR',],values=var)
-        except:
-            pass
-
-        #get only P > 200000 in df2 and df
-        if(i==0):
-            mydata=mydata.loc[:,mydata.columns.get_level_values('P')>200000]
-            try:
-                paper=paper.loc[:,paper.columns.get_level_values('P')>200000]
-            except:
-                pass
-
-            #get only EGR < 0.7 in df3 and df1
-            mydata=mydata.loc[:,mydata.columns.get_level_values('EGR')<0.7]
-            try:
-                paper=paper.loc[:,paper.columns.get_level_values('EGR')<0.7]
-            except:
-                pass
-        else:
-            mydata=mydata.loc[:,mydata.columns.get_level_values('P')<200000]
-            try:
-                paper=paper.loc[:,paper.columns.get_level_values('P')<200000]
-            except:
-                pass
-            #get only EGR < 0.7 in df3 and df1
-            mydata=mydata.loc[:,mydata.columns.get_level_values('EGR')<0.7]
-            try:
-                paper=paper.loc[:,paper.columns.get_level_values('EGR')<0.7]
-            except:
-                pass
-
-        #create a string label for each P and EGR in df3 with format '%EGR: ; P:'
-        #Create a string label based on df3 columns and names
-        labels = ['%CO2:{}%;{}:{}bar {}'.format(round(x[1]*100,0), mydata.columns.names[0] ,round(x[0]/100000,0),mech[0]) for x in mydata.columns]
-
-        #labels.append(['%CO2:{}%;{}:{}bar {}'.format(round(x[1]*100,0), paper.columns.names[0] ,round(x[0]/100000,0),mech[1]) for x in paper.columns])
+    for j,input in enumerate(inputs):
+        plt.gca().set_prop_cycle(None)
+        data=input.pivot_table(index=['phi'],columns=['EGR','FB'],values=var)
+        print(data)
         
-        #print(df3.columns.names)
+        label = [str(data.columns.names[0])+':'+str(val[0])+' '+
+                 #str(data.columns.names[1])+ 
+                 #X,'H2' as index and 'fuel' as exponent
+                 r'$\ X_{H2}^{fuel}$'+
+                 ':'+str(val[1]) for val in data.columns.values]
+        d = data.plot(#x='phi',y=var,
+                  ax=ax,style=symbols[j],
+                  label=label,#color=colors[i*j]
+                 )
+        ax.legend(label,loc='upper left',handler_map={d: HandlerLine2D(numpoints=0)})
+        
+    plt.xlabel('Equivalence ratio')
+    plt.ylabel(ylabels[i])
+    plt.title(titles[i]+' - ('+r"$\bf{"+'T_{in}CO2:'+str(input['Tin'][0])+'K'+ "}$"+')')
 
-        title='(1D) '+titles[idx]+' vs equivalence ratio ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'
-        human_labels = labels+['same but with ARC (QC22)']
-        xlabel='Phi'
-        ylabel=ylabels[idx]
+    #add a second legend to show each marker for each mech
+    ax2 = ax.twinx()
+    for k,_ in enumerate(inputs):
+        ax2.plot([],[],symbols[k],
+                 label=mech[k], 
+                 c='black',
+                )
+    ax2.get_yaxis().set_visible(False)
+    ax2.legend(loc='upper right')
+    ax.grid()
+    
+    #plt.legend(label,loc='upper left')
+    plt.savefig(path+'/img/'+
+                'ARC2'+
+                '_'+var+'.png')
 
-        fs=20
-
-        _,ax = plt.subplots(1,1,figsize=(10,10))
-        if(var=='dF'):
-            mydata = mydata*1000000
-            try:
-                paper = paper*1000000
-            except:
-                pass
-        mydata.plot(ax=ax,style='o-',legend=False,color=colors[:len(mydata.columns)])
-        try:
-            paper.plot(ax=ax,style='x--',legend=False,color=colors[:len(mydata.columns)],markersize=10)
-        except:
-            pass
-
-        #increase font size of ticks
-        ax.tick_params(axis='both', which='major', labelsize=fs)
-        #increase font size of labels x and y 
-        ax.set_xlabel(xlabel,fontsize=fs)
-        ax.set_ylabel(ylabel,fontsize=fs)
-        ax.set_title(title,fontsize=20)
-
-        plt.rcParams.update({'font.size': fs})
-        plt.grid()
-        ax.legend(human_labels,loc='best',numpoints=1,fontsize=fs-5)
-        #ax.legend('[1]')
-        plt.tight_layout()
-        #plt.show()
-        plt.savefig(path+'/img/'+var+str(i)+'_1D_ARC_QC_detailled.png', dpi=300, bbox_inches='tight')
-        #plt.close()
-
-    #show_graphs(mydata,title,human_labels,xlabel,ylabel,subplot=1,plot=False,save=False,path=path+'/img/')
-    #show_graphs(paper,title,human_labels,xlabel,ylabel,subplot=1,ax=ax,save=True,path=path+'/img/',style='x')
     
