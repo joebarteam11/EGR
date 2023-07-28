@@ -17,26 +17,26 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
 
-        temptlist = [i for i in np.arange(290,305,100.0)]
-        presslist= [i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [i for i in np.arange(0.7,1.3,0.2)]
+        temptlist = [300]#[i for i in np.arange(290,305,100.0)]
+        presslist= [1E5]#[i for i in np.arange(1E5,1.4E5,0.2E5)]
+        phirange = [i for i in np.arange(0.701,1.302,0.1)]
         fuelblendrange = [i for i in np.arange(0.0,0.3,0.1)]
-        egrrange = [i for i in np.arange(0.0,0.1,0.2)]
-        config = case(['CH4:1.','H2:1'],                     #fuel compo
+        egrrange = [i for i in np.arange(0.0,0.3,0.1)]
+        config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     temptlist,                    #tin fuel
-                    presslist,                        #pin fuel
-                    'O2:1. N2:3.76',              #ox compo
+                    presslist,                    #pin fuel
+                    'O2:1.0 N2:3.76',              #ox compo
                     temptlist,                    #tin ox
-                    presslist,                        #pin ox
-                    'CO2:1.',                     #egr compo
+                    presslist,                    #pin ox
+                    'CO2:1.0',                     #egr compo
                     temptlist,                    #tin egr
-                    presslist,                        #pin egr
-                    phirange,   #[i for i in np.arange(0.60,2.51,0.1)],        #phi range
+                    presslist,                    #pin egr
+                    phirange,                     #[i for i in np.arange(0.60,2.51,0.1)],        #phi range
                     fuelblendrange,
-                    egrrange,   #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
+                    egrrange,                     #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                     'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
-                    'schemes/CH4_15_256_9_AP.cti',               #path to scheme
+                    'schemes/CH4_15_256_9_AP.cti', #mechanism file
                     'AVBP', #transport model
                     'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
                     )
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     species = ['O2','CO','CO2']
     real_egr = False
     restart_rate = None
-    save_file_name = path + "/" + dim + "_" + time_formated + ".csv"
+    save_file_name = path + "/" + dim + "TEST_STOICH_AP_" + time_formated + ".csv"
 
 
     if ncpu==1:
