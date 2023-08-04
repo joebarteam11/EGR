@@ -12,16 +12,17 @@ if __name__ == '__main__':
     
     if rank_0:
         
-        mpiprint('Current folder: '+path)
-        mpiprint(f"Running Cantera version: {ct.__version__}")
+        mpiprint('Current folder: '+path,file=sys.stdout)
+        mpiprint(f"Running Cantera version: {ct.__version__}",file=sys.stdout)
+        mpiprint(f"Running on {ncpu} cores",file=sys.stdout)
         # get the start time
         st = time.time()
 
         temptlist = [300]#[i for i in np.arange(290,305,100.0)]
         presslist= [1E5]#[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [i for i in np.arange(0.701,1.302,0.1)]
-        fuelblendrange = [i for i in np.arange(0.0,0.3,0.1)]
-        egrrange = [i for i in np.arange(0.0,0.3,0.1)]
+        phirange = [0.85]#[i for i in np.arange(0.701,1.302,0.1)]
+        fuelblendrange = [i for i in np.arange(0.0,0.3,0.05)]
+        egrrange = [0.3]#[i for i in np.arange(0.0,0.3,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     temptlist,                    #tin fuel
                     presslist,                    #pin fuel
@@ -50,25 +51,24 @@ if __name__ == '__main__':
 
         # Get start time for intermediate result saving
         
+        mpiprint('nCPU :'+str(ncpu),file=sys.stdout)
+        mpiprint('nItems :'+str(len(items)),file=sys.stdout)
 
-        mpiprint('nCPU :'+str(ncpu))
-        mpiprint('nItems :'+str(len(items)))
-
-        #Progress bar declaration
-        # pbar=tqdm(total=len(items),file=sys.stdout) 
-        # def update(*a):
-        #     pbar.update()
+        init_cases(config)
     else:
         items=[]
 
 
+
     dim='1D'
     time_formated = time.strftime("%Y%m%d-%H%M%S")
-    optimise_mpi_flame_order = True
+    optimise_mpi_flame_order = False
     species = ['O2','CO','CO2']
     real_egr = False
     restart_rate = None
     save_file_name = path + "/" + dim + "TEST_STOICH_AP_" + time_formated + ".csv"
+
+
 
 
     if ncpu==1:
@@ -82,6 +82,6 @@ if __name__ == '__main__':
         et = time.time()
         elapsed_time = et - st
 
-        print('Execution time:', elapsed_time, 'seconds')
+        mpiprint('\n Execution time: '+ str(elapsed_time)+' seconds',file=sys.stdout)
         sys.stdout.flush()
         MPI.COMM_WORLD.Abort(0)

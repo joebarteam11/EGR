@@ -3,10 +3,21 @@ import numpy as np
 from mpi4py import MPI
 import pandas as pd
 import time
+import logging
 from lib_egr_260 import *
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+try:
+    from tqdm import tqdm
+except:
+    print("tqdm not installed")
+    pass
 
+
+logger = logging.getLogger('mpi')
+logging.basicConfig(filename="mpi.log",filemode='w',level=logging.DEBUG,format='%(message)s')
+#logging.FileHandler("mpi.log", mode='w',level=logging.INFO)
+#log.addHandler(logging.FileHandler("mpi.log", mode='w',level=logging.INFO))
 
 def initialize_MPI():
     comm = MPI.COMM_WORLD # Initialise MPI
@@ -57,14 +68,25 @@ def master_items_and_status_update_new_started_flamme(items_and_status,talking_t
     items_and_status.loc[index_to_start:index_to_start,'by_cpu']=talking_to_cpu # Declare flame as calculated by proc talking_to_cpu
     return msg,items_and_status
 
-def mpiprint(message_to_print):
-    print(message_to_print)
-    sys.stdout.flush() # Forces print of previous print call
-    return
+def mpiprint(message_to_log,priority="info",file=None):
 
-def rank0_update_output_log(started,finished,itemtot):
+    if file is not None:
+        print(message_to_log)
+        sys.stdout.flush()
+
+    if priority == "info":
+        logger.info(message_to_log)
+    elif priority == "warning":
+        logger.warning(message_to_log)
+
+
+    #print(message_to_print,file=file,flush=True)
+    #sys.stdout.flush() # Forces print of previous print call
+
+
+def rank0_update_output_log(started,finished,itemtot,file=None):
     message_to_print=str('\n!------------------------------!\n!     '+str(finished)+' finished / '+str(itemtot)+'    !\n!     '+str(started)+' started / '+str(itemtot)+'    !\n!------------------------------!')
-    mpiprint(message_to_print)
+    mpiprint(message_to_print,file)
     return
 
 
@@ -175,7 +197,7 @@ def slave_compute_and_communicate_1D(comm,items,restart_rate,real_egr,results):
     proc0=int(0)
     # msg_to_print='I am rank '+str(myrank)+' my item is',str(items)
     st = time.time() # Beginning of solving flame
-    results += [compute_solutions_1D(*item,restart_rate,real_egr) for item in items[:1]]
+    results += [compute_solutions_1D(*item,restart_rate,real_egr) for item in items.iloc[:1]]
     et = time.time() # End of solving flame
     elapsed_time = et - st 
     msg_to_send='data'      # New intention with proc 0 to send data        
@@ -189,7 +211,7 @@ def slave_compute_and_communicate_0D(comm,items,real_egr,species):
     proc0=int(0)
     # msg_to_print='I am rank '+str(myrank)+' my item is',str(items)
     st = time.time() # Beginning of solving flame
-    reactor_and_df = [compute_solutions_0D(*item,real_egr,species) for item in items[:1]]
+    reactor_and_df = [compute_solutions_0D(*item,real_egr,species) for item in items.iloc[:1]]
     results = reactor_and_df[0][1]
     et = time.time() # End of solving flame
     elapsed_time = et - st
@@ -205,7 +227,7 @@ def slave_compute_and_communicate_equilibrate(comm,items,species,results):
     proc0=int(0)
     # msg_to_print='I am rank '+str(myrank)+' my item is',str(items)
     st = time.time() # Beginning of solving flame
-    results += [compute_equilibrium(*item,species) for item in items[:1]]
+    results += [compute_equilibrium(*item,species) for item in items.iloc[:1]]
     et = time.time() # End of solving flame
     elapsed_time = et - st
     msg_to_send='data'             
@@ -220,6 +242,11 @@ def slave_compute_and_communicate_equilibrate(comm,items,species,results):
 def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name):
     time_slower = 0
     results = []
+    pbar_started=tqdm(total=len(items),file=sys.stdout) # Progress bar declaration
+    pbar_started.set_description("Started")
+    pbar_finished=tqdm(total=len(items),file=sys.stdout) # Progress bar declaration
+    pbar_finished.set_description("Finished")
+
     items_and_status, requests, itemtot, nb_of_started_flames, nb_of_finished_flames  = initialize_master_1D_flame(items,comm,ncpu)
 
     while itemtot!=nb_of_finished_flames:  # While calculation is not finished : 
@@ -231,14 +258,33 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_na
 
         if intention=='data': # If slave has data to send to master,      
             items_and_status = master_intention_is_data(comm,talking_to_cpu,items_and_status,results) # Receive this data, 
+            items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu) # Update calculations status
+            try:
+                pbar_finished.update() # Update progress bar
+                print()
+                rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot) # log calculation status
+            except:
+                #items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu) # Update calculations status
+                rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot,file=sys.stdout) # Prints calculation status
+                #pass
 
-        if intention=='available': # If slave is ready for a calculation, 
+        elif intention=='available': # If slave is ready for a calculation,
             items_and_status = master_intention_is_available(comm,items_and_status,talking_to_cpu,itemtot,nb_of_started_flames) # Send next calculation to do
+            items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu) # Update calculations status
+            
+            try:
+                if(nb_of_started_flames!=len(items)+1):
+                    pbar_started.update() # Update progress bar
+                    print()
+                rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot) # log calculation status
+            except:
+                
+                rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot,file=sys.stdout) # Prints calculation status
+                #pass
 
-
-        items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu) # Update calculations status
-        rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot) # Prints calculation status
-
+        else :
+            items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu) # Update calculations status
+            rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot) # log calculation status
 
         if nb_of_finished_flames> 0 and  nb_of_finished_flames%10==0 : # Every 10 itération, saves a intermediate result file
             output=pd.concat(results[:],axis=0) 
@@ -249,7 +295,9 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_na
     # When calculation is finished, 
     output=pd.concat(results[:],axis=0) 
     output.to_csv(save_file_name,index=False) 
-    mpiprint(output)
+    pbar_started.close()
+    pbar_finished.close()
+    mpiprint(output, file=sys.stdout)
     mpiprint(items_and_status.to_string())
 
     return 
@@ -270,8 +318,8 @@ def MPI_CALCULATION_SLAVE(comm,species,restart_rate,real_egr,dim):
                 slave_compute_and_communicate_1D(comm,items,restart_rate,real_egr,results=[])
         else:
             not_end=False
-def MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,species,dim,restart_rate,real_egr):
 
+def MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,species,dim,restart_rate,real_egr):
 
     if rank_0:
         MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name)
@@ -300,10 +348,10 @@ def MONO_CPU_CALCULATION(items,species,save_file_name,dim,real_egr,restart_rate)
 
 
 def PRINT_MONO_CPU_WARNING():
-    for i in range(20):
-        mpiprint("--------------------------------------------------")
-        mpiprint("WARNING, I AM BETTER FOR PARALLEL MPI CALCULATIONS")
-        mpiprint("--------------------------------------------------")
+    #for i in range(20):
+    mpiprint("--------------------------------------------------",file=sys.stdout)
+    mpiprint("WARNING, I AM BETTER FOR PARALLEL MPI CALCULATIONS",file=sys.stdout)
+    mpiprint("--------------------------------------------------",file=sys.stdout)
 
 
 
@@ -317,8 +365,8 @@ if __name__ == '__main__':
     
     if rank_0:
         
-        mpiprint('Current folder: '+path)
-        mpiprint(f"Running Cantera version: {ct.__version__}")
+        mpiprint('Current folder: '+path,file=sys.stdout)
+        mpiprint(f"Running Cantera version: {ct.__version__}",file=sys.stdout)
         # get the start time
         st = time.time()
 
@@ -356,8 +404,8 @@ if __name__ == '__main__':
         # Get start time for intermediate result saving
         
 
-        mpiprint('nCPU :'+str(ncpu))
-        mpiprint('nItems :'+str(len(items)))
+        mpiprint('nCPU :'+str(ncpu),file=sys.stdout)
+        mpiprint('nItems :'+str(len(items)),file=sys.stdout)
 
         #Progress bar declaration
         # pbar=tqdm(total=len(items),file=sys.stdout) 

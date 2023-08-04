@@ -31,8 +31,7 @@ $$\phi=S_{x}\frac{X_{fuel}}{X_{O_{2}}}$$
 For Methane,
 $$S_{x}=\left.\frac{X_{O_{2}}}{X_{fuel}}\right|_{stoech}=2$$
 
-(hardcoded value for now, enhancement would be at least to be able to
-provide it with the other parameters)
+The value of $S_{x}$ is computed on the fly for each fuel blend.
 
 ## EGR rate
 
