@@ -20,8 +20,8 @@ if __name__ == '__main__':
 
         temptlist = [300]#[i for i in np.arange(290,305,100.0)]
         presslist= [1E5]#[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [0.85]#[i for i in np.arange(0.701,1.302,0.1)]
-        fuelblendrange = [i for i in np.arange(0.0,0.3,0.05)]
+        phirange = [i for i in np.arange(0.704,1.305,0.1)]
+        fuelblendrange = [i for i in np.arange(0.004,0.300,0.1)]
         egrrange = [0.3]#[i for i in np.arange(0.0,0.3,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     temptlist,                    #tin fuel
@@ -51,7 +51,6 @@ if __name__ == '__main__':
 
         # Get start time for intermediate result saving
         
-        mpiprint('nCPU :'+str(ncpu),file=sys.stdout)
         mpiprint('nItems :'+str(len(items)),file=sys.stdout)
 
         init_cases(config)
@@ -64,18 +63,24 @@ if __name__ == '__main__':
     time_formated = time.strftime("%Y%m%d-%H%M%S")
     optimise_mpi_flame_order = False
     species = ['O2','CO','CO2']
-    real_egr = False
+    real_egr = True
+    dry=True
+    T_reinj=300
+
     restart_rate = None
-    save_file_name = path + "/" + dim + "TEST_STOICH_AP_" + time_formated + ".csv"
+    if (real_egr):
+        save_file_name = path + "/" + dim + "REAL_EGR" + ".csv"
+    else:
+        save_file_name = path + "/" + dim + "CO2" + ".csv"
 
 
 
 
     if ncpu==1:
         PRINT_MONO_CPU_WARNING()
-        MONO_CPU_CALCULATION(items,species,save_file_name,dim,real_egr,restart_rate)
+        MONO_CPU_CALCULATION(items,species,save_file_name,dim,restart_rate,real_egr,dry,T_reinj)
     else:
-        MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,species,dim,restart_rate,real_egr)
+        MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,species,dim,restart_rate,real_egr,dry,T_reinj)
 
     # get the execution time
     if rank_0:
