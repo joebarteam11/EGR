@@ -1,15 +1,14 @@
 import sys,os
 import warnings
 import re
-#import time
 import logging
+import hashlib  
 import numpy as np
 import cantera as ct
-#import matplotlib
-#import matplotlib.pyplot as plt
 from mpi4py import MPI
 import pandas as pd
 from packaging import version
+from math import floor
 
 
 #import multiprocessing as mp
@@ -241,7 +240,7 @@ def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',e
         raise ValueError('egr_unit must be mass, mole or vol')
     
 def create_reservoir(config,content, T, P,blend_ratio=None,scheme=None):
-        
+    warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...    
     if(scheme is None):
         scheme = config.scheme
         
@@ -298,7 +297,7 @@ def create_reservoir(config,content, T, P,blend_ratio=None,scheme=None):
         raise ValueError('Only two streams can be mixed in varaying proportions (but each stream can be a mixture)')
 
 def burned_gas(phi,config,egr_rate,ignition=True):
-
+    warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
         gas=ct.Solution(config.scheme, transport_model=config.transport)
     else:
@@ -326,7 +325,7 @@ def build_reactor(mixture,volume):
     return mix,pressure_regulator
 
 def mixer(config,phi,egr,fb,real_egr=False,T_reinj=None):
-
+    warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
         gas=ct.Solution(config.scheme, transport_model=config.transport)
     else:
@@ -386,3 +385,19 @@ def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
 
     return f
 
+def generate_unique_filename(flame):
+    # Convert parameters to strings for inclusion in the identifier
+    compo_str = '_'.join([f"{specie}:{flame.inlet.X[i]:.2f}"  for i,specie in enumerate(flame.gas.species_names) if flame.inlet.X[i]>0])
+    #oxidizer_str = '_'.join([f"{species}:{config.gas.ox.X[i]:.2f}" for i,species in enumerate(config.gas.ox.species_names) if config.gas.ox.X[i]>0])
+    pressure_str = f"{floor(round(flame.P/1e5,3))}atm"
+    temperature_str = f"{floor(round(flame.inlet.T/100,3))}K/100"
+
+    # Combine the parameters into a single string
+    parameter_str = f"{compo_str}_{pressure_str}_{temperature_str}"
+    print(f"Parameter string: {parameter_str}")
+    # Generate a hash of the parameter string
+    hash_object = hashlib.md5(parameter_str.encode())
+    identifier = hash_object.hexdigest()
+    print(f"Hash: {identifier}")
+
+    return identifier

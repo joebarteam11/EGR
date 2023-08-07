@@ -20,9 +20,9 @@ if __name__ == '__main__':
 
         temptlist = [300]#[i for i in np.arange(290,305,100.0)]
         presslist= [1E5]#[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [i for i in np.arange(0.704,1.305,0.1)]
-        fuelblendrange = [i for i in np.arange(0.004,0.300,0.1)]
-        egrrange = [0.3]#[i for i in np.arange(0.0,0.3,0.1)]
+        phirange = [0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)]+[1.05]
+        fuelblendrange = [i for i in np.arange(0.0004,0.300,0.100)]
+        egrrange = [i for i in np.arange(0.0,0.3,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     temptlist,                    #tin fuel
                     presslist,                    #pin fuel
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     if (real_egr):
         save_file_name = path + "/" + dim + "REAL_EGR" + ".csv"
     else:
-        save_file_name = path + "/" + dim + "CO2" + ".csv"
+        save_file_name = path + "/" + dim + "NO_EGR" + ".csv"
 
 
 

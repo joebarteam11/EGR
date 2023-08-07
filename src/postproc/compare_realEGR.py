@@ -13,8 +13,10 @@ print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
-    '/1DREAL_EGR.csv',
-    '/1DCO2.csv',
+    '/1DNO_EGR.csv',
+    '/1DNO_EGR_detail.csv',
+    #'/1DREAL_EGR_EGR_0.1.csv',
+    #'/1DCO2_EGR_0.1.csv',
     #'/CH4_15_256_9_AP.csv',
 ]
 files=[path+
@@ -38,11 +40,13 @@ titles = ['Flame thickness',
          ]
 
 mech=[#'Polimi',
-      'Real EGR (dried)',
-      'CO2 as EGR',
+      #'Real EGR (dried) ARC',
+      #'CO2 as EGR ARC',
+      'No EGR ARC',
+      'No EGR detailed',
       #'ARC(AP)',
       ]
-symbols = ['o-','x-','s-',]
+symbols = ['o--','x-','s-',]
 
 
 
@@ -56,7 +60,7 @@ for i,var in enumerate(var_to_plot):
         data=input.pivot_table(index=['phi'],columns=['EGR','FB'],values=var)
         print(data)
         
-        label = [str(data.columns.names[0])+':'+str(val[0])+' '+
+        label = [r'$\ X_{EGR}^{fuel}$'+':'+str(val[0])+' '+
                  #str(data.columns.names[1])+ 
                  #X,'H2' as index and 'fuel' as exponent
                  r'$\ X_{H2}^{fuel}$'+
@@ -69,7 +73,7 @@ for i,var in enumerate(var_to_plot):
         
     plt.xlabel('Equivalence ratio')
     plt.ylabel(ylabels[i])
-    plt.title(titles[i]+' - ('+r"$\bf{"+'T_{in}EGR:'+str(input['Tin'][0])+'K'+ "}$"+')')
+    plt.title(titles[i]+' - ('+r"$\bf{"+'T_{in}EGR:'+str(round(input['Tin'][0],1))+'K'+ "}$"+')')
 
     #add a second legend to show each marker for each mech
     ax2 = ax.twinx()
@@ -79,12 +83,15 @@ for i,var in enumerate(var_to_plot):
                  c='black',
                 )
     ax2.get_yaxis().set_visible(False)
-    ax2.legend(loc='upper right')
+    ax2.legend(loc='lower right')
     ax.grid()
     
     #plt.legend(label,loc='upper left')
+    plt.rcParams.update({'font.size': 15,
+                         'lines.markersize': 10,
+                         })
     plt.savefig(path+'/img/'+
-                'EGR_comp'+
+                'EGR_0.0_ARC'+
                 '_'+var+'.png')
 
     
