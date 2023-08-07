@@ -21,9 +21,9 @@ if __name__ == '__main__':
 
         temptlist = [300]#[i for i in np.arange(290,305,100.0)]
         presslist= [1E5]#[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] [0.8]#
-        fuelblendrange = [i for i in np.arange(0.0004,0.300,0.100)] # [0]#
-        egrrange = [i for i in np.arange(0.0,0.3,0.1)]
+        phirange = [0.85]#[0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] 
+        fuelblendrange = [i for i in np.arange(0.0,0.301,0.100)] # [0]#
+        egrrange = [i for i in np.arange(0.0,0.301,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     temptlist,                    #tin fuel
                     presslist,                    #pin fuel
@@ -48,23 +48,16 @@ if __name__ == '__main__':
         Pins = [[p[i] for p in config.pin] for i in range(len(config.pin.fuel))]
         
         items = [[config,phi,Tin,Pin,EGR,FB] for phi in config.phi_range for EGR in config.egr_range for FB in config.fuelblend_range for Tin in Tins for Pin in Pins ]
-        #print(items)
-
-        # Get start time for intermediate result saving
         
-        mpiprint('nItems :'+str(len(items)),file=sys.stdout)
-
         init_cases(config)
     else:
         items=[]
 
-
-
     dim='1D'
     time_formated = time.strftime("%Y%m%d-%H%M%S")
     optimise_mpi_flame_order = False
-    species = ['O2','CO','CO2']
-    real_egr = True
+    species_bg_output = ['O2','CO','CO2']
+    real_egr = False
     dry=True
     T_reinj=300
 
@@ -76,9 +69,9 @@ if __name__ == '__main__':
 
     if ncpu==1:
         PRINT_MONO_CPU_WARNING()
-        MONO_CPU_CALCULATION(items,species,save_file_name,dim,restart_rate,real_egr,dry,T_reinj)
+        MONO_CPU_CALCULATION(items,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
     else:
-        MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,species,dim,restart_rate,real_egr,dry,T_reinj)
+        MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
 
     comm.Barrier()
     # get the execution time
@@ -87,7 +80,3 @@ if __name__ == '__main__':
         elapsed_time = et - st
 
         mpiprint('\n Execution time: '+ str(elapsed_time)+' seconds',file=sys.stdout)
-        #MPI.COMM_WORLD.Abort(0)
-
-
-
