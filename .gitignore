@@ -7,8 +7,11 @@ ipynb_chekpoints/
 CRECK_new.cti
 alcool.cti
 ssb*
-*.xml
 log_*
+equivRatio.py
+filehash.py
+sources_cantera/
+solut_avbp*
 
 # C extensions
 *.so
