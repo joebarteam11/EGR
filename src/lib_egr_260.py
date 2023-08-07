@@ -108,8 +108,7 @@ class case:
 
 def init_cases(config):
     if(config.isARC):
-        #replace extension from scheme variable
-        ct.compile_fortran(config.scheme.split('.')[0]+'.f90')
+        ct.compile_fortran(config.scheme.replace('.cti','.f90'))
 
 def stoechiometric_ratios(config):
     mw_o2 = config.gas.ox['O2'].molecular_weights/1000.0 #kg/mol

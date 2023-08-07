@@ -4,12 +4,12 @@ from mpi_func import *
 
 if __name__ == '__main__':
 
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
     # MPI Init.
-    path = os.getcwd()
+    path = os.path.dirname(os.path.dirname(__file__))+'/'
     comm = MPI.COMM_WORLD 
     ncpu,myrank,rank_0=initialize_MPI(comm)
-
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     
     if rank_0:
         
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                     egrrange,                     #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                     'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
-                    'schemes/CH4_15_256_9_AP.cti', #mechanism file
+                    path+'schemes/CH4_15_256_9_AP.cti', #mechanism file
                     'AVBP', #transport model
                     'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
                     )
