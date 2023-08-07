@@ -201,9 +201,9 @@ def solve_flame(f,flametitle,config,phi,egr,fb,real_egr=False,dry=False,T_reinj=
                     print('EGR applied to inlet')
             #f.save(flametitle)
             try:
-                f.save(flametitle)
+                f.save(flametitle, loglevel=loglevel)
             except:
-                logprint('Cannot save flame to file '+flametitle,file=sys.stdout)
+                logprint('Cannot save flame to file '+flametitle)
 
         except FlameExtinguished:
             print('Flame extinguished')
@@ -256,14 +256,15 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
         f.inlet.X = X
 
     flamename = generate_unique_filename(f)
+    logprint('Flame hash: '+flamename)
 
     flametitle = path+'/data/'+flamename+'.xml'
     if os.path.isfile(flametitle):
-        f.restore(flametitle)
-        logprint('Flame restored from file '+flametitle,file=sys.stdout)
+        f.restore(flametitle, loglevel=0)
+        logprint('Flame restored from file '+flametitle)
     else:
         f.set_initial_guess()
-        logprint('Flame initial guess set',file=sys.stdout)
+        logprint('Flame initial guess set')
 
     #print('Inlet composition (mol)',f.inlet.X)
     #print('Inlet composition (mass)',f.inlet.Y)

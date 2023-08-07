@@ -10,13 +10,8 @@ import pandas as pd
 from packaging import version
 from math import floor
 
-
-#import multiprocessing as mp
-#from alive_progress import alive_bar
-#from tqdm import tqdm
-
-
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 comm = MPI.COMM_WORLD
 computelog = logging.getLogger(str(comm.Get_rank()))
 
@@ -394,10 +389,9 @@ def generate_unique_filename(flame):
 
     # Combine the parameters into a single string
     parameter_str = f"{compo_str}_{pressure_str}_{temperature_str}"
-    print(f"Parameter string: {parameter_str}")
+    logprint(f"Flame name: {parameter_str}")
     # Generate a hash of the parameter string
     hash_object = hashlib.md5(parameter_str.encode())
     identifier = hash_object.hexdigest()
-    print(f"Hash: {identifier}")
 
     return identifier

@@ -6,7 +6,8 @@ if __name__ == '__main__':
 
     # MPI Init.
     path = os.getcwd()
-    comm,ncpu,myrank,rank_0=initialize_MPI()
+    comm = MPI.COMM_WORLD 
+    ncpu,myrank,rank_0=initialize_MPI(comm)
 
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     
@@ -20,8 +21,8 @@ if __name__ == '__main__':
 
         temptlist = [300]#[i for i in np.arange(290,305,100.0)]
         presslist= [1E5]#[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)]+[1.05]
-        fuelblendrange = [i for i in np.arange(0.0004,0.300,0.100)]
+        phirange = [0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] [0.8]#
+        fuelblendrange = [i for i in np.arange(0.0004,0.300,0.100)] # [0]#
         egrrange = [i for i in np.arange(0.0,0.3,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     temptlist,                    #tin fuel
@@ -69,12 +70,9 @@ if __name__ == '__main__':
 
     restart_rate = None
     if (real_egr):
-        save_file_name = path + "/" + dim + "REAL_EGR" + ".csv"
+        save_file_name = path + "/results/" + dim + "REAL_EGR" + ".csv"
     else:
-        save_file_name = path + "/" + dim + "NO_EGR" + ".csv"
-
-
-
+        save_file_name = path + "/results/" + dim + "NO_EGR" + ".csv"
 
     if ncpu==1:
         PRINT_MONO_CPU_WARNING()
@@ -82,11 +80,14 @@ if __name__ == '__main__':
     else:
         MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,species,dim,restart_rate,real_egr,dry,T_reinj)
 
+    comm.Barrier()
     # get the execution time
     if rank_0:
         et = time.time()
         elapsed_time = et - st
 
         mpiprint('\n Execution time: '+ str(elapsed_time)+' seconds',file=sys.stdout)
-        sys.stdout.flush()
-        MPI.COMM_WORLD.Abort(0)
+        #MPI.COMM_WORLD.Abort(0)
+
+
+
