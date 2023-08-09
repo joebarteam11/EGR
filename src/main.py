@@ -10,7 +10,9 @@ if __name__ == '__main__':
     path = os.path.dirname(os.path.dirname(__file__))+'/'
     comm = MPI.COMM_WORLD 
     ncpu,myrank,rank_0=initialize_MPI(comm)
-    
+
+    ct.suppress_thermo_warnings() 
+
     if rank_0:
         
         mpiprint('Current folder: '+path,file=sys.stdout)
@@ -19,7 +21,7 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
 
-        temptlist = [300]#[i for i in np.arange(290,305,100.0)]
+        temptlist = [300,305,310,320]#[i for i in np.arange(290,305,100.0)]
         presslist= [1E5]#[i for i in np.arange(1E5,1.4E5,0.2E5)]
         phirange = [0.85]#[0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] 
         fuelblendrange = [i for i in np.arange(0.0,0.301,0.100)] # [0]#

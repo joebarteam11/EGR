@@ -54,7 +54,7 @@ def initialize_master_to_slave_communication(comm,ncpu):
     for Master_is_talking_to_CPUn in range(1,ncpu):
         avmsg.append(comm.irecv(source=Master_is_talking_to_CPUn,tag=1)) # Start communication with proc Master_is_talking_to_CPUn 
     return avmsg
-
+    
 def receive_intention_from_slave(requests): 
     nproc_and_message=MPI.Request.waitany(requests)  
     message=nproc_and_message[1] # Extract the message from the request
@@ -226,17 +226,31 @@ def slave_compute_and_communicate_equilibrate(comm,items,species,results):
     sends_msg_to_proc(comm,results,0,3) # Sends results to proc0 
     sends_msg_to_proc(comm,elapsed_time,0,4) 
 
+
+def MPI_end_calculation_request_cleaning(comm,ncpu,items_and_status,itemtot,requests,nb_of_started_flames):
+    for i in range(1,ncpu): # When calculation is finished,
+        if MPI.Request.Get_status(requests[i-1]):
+            intention,talking_to_cpu=receive_intention_from_slave(requests) # Receive intention from slaves
+            items_and_status = master_intention_is_available(comm,items_and_status,talking_to_cpu,itemtot,nb_of_started_flames) # Send next calculation to do                    
+            mpiprint("Cleaning request from MASTER TO "+str(talking_to_cpu))
+            items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu) # Update calculations status
+
+
 def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name):
     time_slower = 0
     results = []
-    pbar_started=tqdm(total=len(items),file=sys.stdout) # Progress bar declaration
-    pbar_started.set_description("Started")
-    pbar_finished=tqdm(total=len(items),file=sys.stdout) # Progress bar declaration
-    pbar_finished.set_description("Finished")
+    try:
+        pbar_started=tqdm(total=len(items),file=sys.stdout) # Progress bar declaration
+        pbar_started.set_description("Started")
+        pbar_finished=tqdm(total=len(items),file=sys.stdout) # Progress bar declaration
+        pbar_finished.set_description("Finished")
+    except:
+        mpiprint("No progress bar")
+        pass
 
     items_and_status, requests, itemtot, nb_of_started_flames, nb_of_finished_flames  = initialize_master_1D_flame(items,comm,ncpu)
 
-    while True:  # While calculation is not finished : 
+    while itemtot!=nb_of_finished_flames:  # While calculation is not finished : 
         intention,talking_to_cpu=receive_intention_from_slave(requests) # Receive intention from slaves
 
         if optimise_mpi_flame_order: # if use decided, 'optimise' calculation order
@@ -270,16 +284,21 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_na
             mpiprint("Partial results has been saved")
             mpiprint(items_and_status.to_string())
 
-        if(itemtot==nb_of_finished_flames): #do while loop emulation
-            break
 
         items_and_status, requests, nb_of_started_flames, nb_of_finished_flames = update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_cpu) # Update calculations status
+    
+    MPI_end_calculation_request_cleaning(comm,ncpu,items_and_status,itemtot,requests,nb_of_started_flames)
+
 
     # When calculation is finished, 
     output=pd.concat(results[:],axis=0) 
     output.to_csv(save_file_name,index=False) 
-    pbar_started.close()
-    pbar_finished.close()
+    try:
+        pbar_started.close()
+        pbar_finished.close()
+    except:
+        mpiprint("No progress bar")
+        pass
     mpiprint(output, file=sys.stdout)
     mpiprint(items_and_status.to_string())
  
