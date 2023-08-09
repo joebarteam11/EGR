@@ -260,8 +260,14 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
 
     flametitle = path+'/data/'+flamename+'.xml'
     if os.path.isfile(flametitle):
-        f.restore(flametitle, loglevel=0)
-        logprint('Flame restored from file '+flametitle)
+        logprint('Flame file '+flametitle+' is found')
+        try:
+            f.restore(flametitle, loglevel=0)
+            logprint('Flame restored from file '+flametitle)
+        except:
+            logprint('Cannot restore flame from file '+flametitle)
+            f.set_initial_guess()
+            logprint('Flame initial guess set')
     else:
         f.set_initial_guess()
         logprint('Flame initial guess set')
