@@ -13,6 +13,7 @@ from lib_egr_1D import compute_solutions_1D
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 
+
 mpilog = logging.getLogger('mpi')
 hl = logging.FileHandler(filename="0.log",mode='a')
 format = logging.Formatter('%(message)s')
@@ -20,9 +21,8 @@ hl.setFormatter(format)
 mpilog.setLevel(logging.INFO)
 mpilog.addHandler(hl)
 
-
-def mpiprint(message_to_log,priority="info",file=None):
-    if file is not None:
+def mpiprint(message_to_log,ncpu=1,priority="info",file=None):
+    if (file is not None or ncpu==1):
         print(message_to_log)
         sys.stdout.flush()
 
@@ -87,6 +87,7 @@ def master_items_and_status_update_new_started_flamme(items_and_status,talking_t
 def rank0_update_output_log(started,finished,itemtot,file=None):
     message_to_print=str('\n!------------------------------!\n!     '+str(finished)+' finished / '+str(itemtot)+'    !\n!     '+str(started)+' started / '+str(itemtot)+'    !\n!------------------------------!')
     mpiprint(message_to_print,file)
+
 
 def update_priority(items_and_status,ncpu,nb_of_started_flames,time_slower):
     st=time.time()
@@ -242,8 +243,11 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_na
     try:
         pbar_started=tqdm(total=len(items),file=sys.stdout) # Progress bar declaration
         pbar_started.set_description("Started")
+        pbar_started.update(0)
         pbar_finished=tqdm(total=len(items),file=sys.stdout) # Progress bar declaration
         pbar_finished.set_description("Finished")
+        pbar_finished.update(0)
+        
     except:
         mpiprint("No progress bar")
         pass
@@ -268,7 +272,7 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_na
         elif intention=='available': # If slave is ready for a calculation,
             items_and_status = master_intention_is_available(comm,items_and_status,talking_to_cpu,itemtot,nb_of_started_flames) # Send next calculation to do            
             try:
-                if(nb_of_started_flames != pbar_started.n):
+                if(nb_of_started_flames != pbar_started.n or nb_of_finished_flames == 0):
                     pbar_started.update() # Update progress bar
                 rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot) # log calculation status
             except:

@@ -289,7 +289,7 @@ def create_reservoir(config,content, T, P,blend_ratio=None,scheme=None):
     
     else:
         raise ValueError('Only two streams can be mixed in varaying proportions (but each stream can be a mixture)')
-
+    
 def burned_gas(phi,config,egr_rate,ignition=True):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
@@ -379,7 +379,7 @@ def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
 
     return f
 
-def generate_unique_filename(flame):
+def generate_unique_filename(config,flame):
     # Convert parameters to strings for inclusion in the identifier
     compo_str = '_'.join([f"{specie}:{flame.inlet.X[i]:.2f}"  for i,specie in enumerate(flame.gas.species_names) if flame.inlet.X[i]>0])
     #oxidizer_str = '_'.join([f"{species}:{config.gas.ox.X[i]:.2f}" for i,species in enumerate(config.gas.ox.species_names) if config.gas.ox.X[i]>0])
@@ -387,10 +387,10 @@ def generate_unique_filename(flame):
     temperature_str = f"{floor(round(flame.inlet.T/100,3))}K/100"
 
     # Combine the parameters into a single string
-    parameter_str = f"{compo_str}_{pressure_str}_{temperature_str}"
+    parameter_str = f"{compo_str}_{pressure_str}_{temperature_str}_{config.scheme.split('/')[-1].split('.')[0]}"
     logprint(f"Flame name: {parameter_str}")
     # Generate a hash of the parameter string
     hash_object = hashlib.md5(parameter_str.encode())
-    identifier = hash_object.hexdigest()
+    uid = hash_object.hexdigest()
 
-    return identifier
+    return parameter_str,uid

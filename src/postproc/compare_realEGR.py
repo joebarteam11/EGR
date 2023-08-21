@@ -13,8 +13,8 @@ print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 
 files=[
-    '/1DNO_EGR.csv',
-    '/1DNO_EGR_detail.csv',
+    '/results/1DCH4_SL_ANTHO.csv',
+    #'/1DNO_EGR_detail.csv',
     #'/1DREAL_EGR_EGR_0.1.csv',
     #'/1DCO2_EGR_0.1.csv',
     #'/CH4_15_256_9_AP.csv',
@@ -40,10 +40,11 @@ titles = ['Flame thickness',
          ]
 
 mech=[#'Polimi',
+    'BFER',
       #'Real EGR (dried) ARC',
       #'CO2 as EGR ARC',
-      'No EGR ARC',
-      'No EGR detailed',
+      #'No EGR ARC',
+      #'No EGR detailed',
       #'ARC(AP)',
       ]
 symbols = ['o--','x-','s-',]
@@ -73,7 +74,9 @@ for i,var in enumerate(var_to_plot):
         
     plt.xlabel('Equivalence ratio')
     plt.ylabel(ylabels[i])
-    plt.title(titles[i]+' - ('+r"$\bf{"+'T_{in}EGR:'+str(round(input['Tin'][0],1))+'K'+ "}$"+')')
+    plt.title(titles[i]
+              #+' - ('+r"$\bf{"+'T_{in}EGR:'+str(round(input['Tin'][0],1))+'K'+ "}$"+')'
+              )
 
     #add a second legend to show each marker for each mech
     ax2 = ax.twinx()
@@ -91,7 +94,7 @@ for i,var in enumerate(var_to_plot):
                          'lines.markersize': 10,
                          })
     plt.savefig(path+'/img/'+
-                'EGR_0.0_ARC'+
+                'CH4_SL_ANTHO'+
                 '_'+var+'.png')
 
     
