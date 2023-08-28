@@ -2,14 +2,30 @@ import time
 from mpi_func import *
 
 
+
 if __name__ == '__main__':
+
+    try: 
+        from mpi4py import MPI
+        mpiprint("mpi4py properly installed, // available ",priority="info")
+        MPI_LOADED=True
+    except:
+        MPI_LOADED=False
+        mpiprint("mpi4py not installed, can only run on one CPU",priority="warning")
+        pass
 
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
     # MPI Init.
     path = os.path.dirname(os.path.dirname(__file__))+'/'
-    comm = MPI.COMM_WORLD 
-    ncpu,myrank,rank_0=initialize_MPI(comm)
+    if MPI_LOADED:
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD 
+        ncpu,myrank,rank_0=initialize_MPI(comm)
+    else:
+        ncpu=1
+        myrank=0
+        rank_0=True
 
     ct.suppress_thermo_warnings() 
 
@@ -21,9 +37,9 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
 
-        temptlist = [300,305,310,320]#[i for i in np.arange(290,305,100.0)]
-        presslist= [1E5]#[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [0.85]#[0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] 
+        temptlist = [300,305,310,320] #[i for i in np.arange(290,305,100.0)]
+        presslist= [1E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
+        phirange = [0.85] #[0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] 
         fuelblendrange = [i for i in np.arange(0.0,0.301,0.100)] # [0]#
         egrrange = [i for i in np.arange(0.0,0.301,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
@@ -70,12 +86,16 @@ if __name__ == '__main__':
         save_file_name = path + "/results/" + dim + "NO_EGR" + ".csv"
 
     if ncpu==1:
-        PRINT_MONO_CPU_WARNING()
+        if MPI_LOADED:
+            PRINT_MONO_CPU_WARNING()
+        else: 
+            PRINT_MONO_CPU_WARNING_AND_MPI_NOT_LOADED()
         MONO_CPU_CALCULATION(items,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
     else:
         MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
 
-    comm.Barrier()
+    if MPI_LOADED:
+        comm.Barrier()
     # get the execution time
     if rank_0:
         et = time.time()

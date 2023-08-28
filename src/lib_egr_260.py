@@ -5,15 +5,26 @@ import logging
 import hashlib  
 import numpy as np
 import cantera as ct
-from mpi4py import MPI
 import pandas as pd
 from packaging import version
 from math import floor
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-comm = MPI.COMM_WORLD
-computelog = logging.getLogger(str(comm.Get_rank()))
+try: 
+    from mpi4py import MPI
+    MPI_LOADED=True
+    comm = MPI.COMM_WORLD
+    my_rank=comm.Get_rank()
+except:
+    MPI_LOADED=False
+    my_rank=0
+    pass
+
+
+
+    
+computelog = logging.getLogger(str(my_rank))
 
 hl = logging.FileHandler(filename=computelog.name+".log",mode='w')
 format = logging.Formatter('%(message)s')
