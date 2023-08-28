@@ -330,7 +330,7 @@ def flamme_thickness(f):
     return thickness
 
 def compute_omega0(f):
-    if(version.parse(ct.__version__) == version.parse("2.3.0")):
+    if(version.parse(ct.__version__) >= version.parse("2.3.0")):
         species_names = f.gas.species_names
         net_prod_rate = f.net_production_rates
         omega0 = [(np.max(np.abs(net_prod_rate[i]))*f.gas[specie].molecular_weights).tolist()[0] for i,specie in enumerate(species_names)]

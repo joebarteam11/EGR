@@ -33,11 +33,11 @@ def mpiprint(message_to_log,priority="info",file=None):
 
 try: 
     from mpi4py import MPI
-    mpiprint("mpi4py properly installed, // available ",priority="info")
+    mpiprint("mpi4py properly installed, // available ",priority="info",file=sys.stdout)
     MPI_LOADED=True
 except:
     MPI_LOADED=False
-    mpiprint("mpi4py not installed, can only run on one CPU",priority="warning")
+    mpiprint("mpi4py not installed, can only run on one CPU",priority="warning",file=sys.stdout)
     pass
 
 
