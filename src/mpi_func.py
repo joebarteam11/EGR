@@ -1,6 +1,5 @@
 import sys,os
 import numpy as np
-from mpi4py import MPI
 import pandas as pd
 import time
 import logging
@@ -12,9 +11,9 @@ from lib_egr_1D import compute_solutions_1D
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-
+path_to_logs = "./logs/"
 mpilog = logging.getLogger('mpi')
-hl = logging.FileHandler(filename="0.log",mode='a')
+hl = logging.FileHandler(filename=path_to_logs+"0.log",mode='a')
 format = logging.Formatter('%(message)s')
 hl.setFormatter(format)
 mpilog.setLevel(logging.INFO)
@@ -30,6 +29,19 @@ def mpiprint(message_to_log,priority="info",file=None):
         mpilog.info(message_to_log)
     elif priority == "warning":
         mpilog.warning(message_to_log)
+
+
+try: 
+    from mpi4py import MPI
+    mpiprint("mpi4py properly installed, // available ",priority="info",file=sys.stdout)
+    MPI_LOADED=True
+except:
+    MPI_LOADED=False
+    mpiprint("mpi4py not installed, can only run on one CPU",priority="warning",file=sys.stdout)
+    pass
+
+
+
 
 try:
     from tqdm import tqdm
@@ -326,6 +338,7 @@ def MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_na
     else:
         MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species)
 
+
 def MONO_CPU_CALCULATION(items,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species):
     mpiprint('Number of cases: '+str(len(items)),file=sys.stdout)
     results = []
@@ -343,6 +356,13 @@ def MONO_CPU_CALCULATION(items,save_file_name,dim,restart_rate,real_egr,dry,T_re
     mpiprint(output)
 
 def PRINT_MONO_CPU_WARNING():
-    mpiprint("--------------------------------------------------",file=sys.stdout)
-    mpiprint("WARNING, I AM BETTER FOR PARALLEL MPI CALCULATIONS",file=sys.stdout)
-    mpiprint("--------------------------------------------------",file=sys.stdout)
+    for i in range(10):
+        mpiprint("--------------------------------------------------",file=sys.stdout)
+        mpiprint("WARNING, I AM BETTER FOR PARALLEL MPI CALCULATIONS",file=sys.stdout)
+        mpiprint("--------------------------------------------------",file=sys.stdout)
+
+def PRINT_MONO_CPU_WARNING_AND_MPI_NOT_LOADED():
+    for i in range(10):
+        mpiprint("--------------------------------------------------",file=sys.stdout)
+        mpiprint("!! WARNING,MPI HAS FAILED TO LOAD, MONO-PROC-RUN !!",file=sys.stdout)
+        mpiprint("--------------------------------------------------",file=sys.stdout)

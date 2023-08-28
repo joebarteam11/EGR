@@ -5,17 +5,28 @@ import logging
 import hashlib  
 import numpy as np
 import cantera as ct
-from mpi4py import MPI
 import pandas as pd
 from packaging import version
 from math import floor
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-comm = MPI.COMM_WORLD
-computelog = logging.getLogger(str(comm.Get_rank()))
+try: 
+    from mpi4py import MPI
+    MPI_LOADED=True
+    comm = MPI.COMM_WORLD
+    my_rank=comm.Get_rank()
+except:
+    MPI_LOADED=False
+    my_rank=0
+    pass
 
-hl = logging.FileHandler(filename=computelog.name+".log",mode='w')
+
+
+    
+computelog = logging.getLogger(str(my_rank))
+path_to_logs = './logs/'
+hl = logging.FileHandler(filename=path_to_logs+computelog.name+".log",mode='w')
 format = logging.Formatter('%(message)s')
 hl.setFormatter(format)
 computelog.setLevel(logging.INFO)
@@ -379,7 +390,7 @@ def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
 
     return f
 
-def generate_unique_filename(flame):
+def generate_unique_filename(config,flame):
     # Convert parameters to strings for inclusion in the identifier
     compo_str = '_'.join([f"{specie}:{flame.inlet.X[i]:.2f}"  for i,specie in enumerate(flame.gas.species_names) if flame.inlet.X[i]>0])
     #oxidizer_str = '_'.join([f"{species}:{config.gas.ox.X[i]:.2f}" for i,species in enumerate(config.gas.ox.species_names) if config.gas.ox.X[i]>0])
@@ -387,10 +398,10 @@ def generate_unique_filename(flame):
     temperature_str = f"{floor(round(flame.inlet.T/100,3))}K/100"
 
     # Combine the parameters into a single string
-    parameter_str = f"{compo_str}_{pressure_str}_{temperature_str}"
+    parameter_str = f"{compo_str}_{pressure_str}_{temperature_str}_{config.scheme.split('/')[-1].split('.')[0]}"
     logprint(f"Flame name: {parameter_str}")
     # Generate a hash of the parameter string
     hash_object = hashlib.md5(parameter_str.encode())
-    identifier = hash_object.hexdigest()
+    uid = hash_object.hexdigest()
 
-    return identifier
+    return parameter_str,uid
