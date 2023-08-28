@@ -25,8 +25,8 @@ except:
 
     
 computelog = logging.getLogger(str(my_rank))
-
-hl = logging.FileHandler(filename=computelog.name+".log",mode='w')
+path_to_logs = './logs/'
+hl = logging.FileHandler(filename=path_to_logs+computelog.name+".log",mode='w')
 format = logging.Formatter('%(message)s')
 hl.setFormatter(format)
 computelog.setLevel(logging.INFO)

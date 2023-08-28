@@ -11,9 +11,9 @@ from lib_egr_1D import compute_solutions_1D
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-
+path_to_logs = "./logs/"
 mpilog = logging.getLogger('mpi')
-hl = logging.FileHandler(filename="0.log",mode='a')
+hl = logging.FileHandler(filename=path_to_logs+"0.log",mode='a')
 format = logging.Formatter('%(message)s')
 hl.setFormatter(format)
 mpilog.setLevel(logging.INFO)
