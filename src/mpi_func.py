@@ -33,7 +33,7 @@ def mpiprint(message_to_log,priority="info",file=None):
 
 try: 
     from mpi4py import MPI
-    mpiprint("mpi4py properly installed, // available ",priority="info",file=sys.stdout)
+    # mpiprint("mpi4py properly installed, // available ")
     MPI_LOADED=True
 except:
     MPI_LOADED=False
@@ -96,9 +96,11 @@ def master_items_and_status_update_new_started_flamme(items_and_status,talking_t
     items_and_status.loc[index_to_start:index_to_start,'by_cpu']=talking_to_cpu # Declare flame as calculated by proc talking_to_cpu
     return msg,items_and_status
 
-def rank0_update_output_log(started,finished,itemtot,file=None):
+def rank0_update_output_log(started,finished,itemtot,file=sys.stdout):
     message_to_print=str('\n!------------------------------!\n!     '+str(finished)+' finished / '+str(itemtot)+'    !\n!     '+str(started)+' started / '+str(itemtot)+'    !\n!------------------------------!')
     mpiprint(message_to_print,file)
+    return 
+
 
 def update_priority(items_and_status,ncpu,nb_of_started_flames,time_slower):
     st=time.time()

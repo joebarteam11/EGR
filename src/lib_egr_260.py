@@ -395,7 +395,7 @@ def generate_unique_filename(config,flame):
     compo_str = '_'.join([f"{specie}:{flame.inlet.X[i]:.2f}"  for i,specie in enumerate(flame.gas.species_names) if flame.inlet.X[i]>0])
     #oxidizer_str = '_'.join([f"{species}:{config.gas.ox.X[i]:.2f}" for i,species in enumerate(config.gas.ox.species_names) if config.gas.ox.X[i]>0])
     pressure_str = f"{floor(round(flame.P/1e5,3))}atm"
-    temperature_str = f"{floor(round(flame.inlet.T/100,3))}K/100"
+    temperature_str = f"{floor(round(flame.inlet.T/100,3))}K_div100"
 
     # Combine the parameters into a single string
     parameter_str = f"{compo_str}_{pressure_str}_{temperature_str}_{config.scheme.split('/')[-1].split('.')[0]}"

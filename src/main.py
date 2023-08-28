@@ -7,7 +7,7 @@ if __name__ == '__main__':
 
     try: 
         from mpi4py import MPI
-        mpiprint("mpi4py properly installed, // available ",priority="info",file=sys.stdout)
+        # mpiprint("mpi4py properly installed, // available ",priority="info")
         MPI_LOADED=True
     except:
         MPI_LOADED=False
@@ -19,7 +19,6 @@ if __name__ == '__main__':
     # MPI Init.
     path = os.path.dirname(os.path.dirname(__file__))+'/'
     if MPI_LOADED:
-        from mpi4py import MPI
         comm = MPI.COMM_WORLD 
         ncpu,myrank,rank_0=initialize_MPI(comm)
     else:
