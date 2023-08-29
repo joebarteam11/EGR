@@ -2,7 +2,6 @@ numpy
 pandas
 mpi4py
 tqdm
-warnings
 math
 logging
 cantera
