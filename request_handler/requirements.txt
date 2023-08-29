@@ -1,3 +1,11 @@
 numpy
+pandas
+mpi4py
+tqdm
+time
+hashlib
+warnings
+math
+logging
 cantera
 matplotlib
