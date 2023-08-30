@@ -171,7 +171,7 @@ def update_priority(items_and_status,ncpu,nb_of_started_flames,time_slower):
 def initialize_master_1D_flame(items,comm,ncpu):
     itemtot=len(items)
     requests=initialize_master_to_slave_communication(comm,ncpu) # Initialise all request between proc 0 and slaves
-    items_and_status = {'items': items,'started': np.zeros(len(items)),'finished': np.zeros(len(items)),'time':(np.zeros(itemtot)),'by_cpu':(np.zeros(itemtot)),'priority':(np.ones(itemtot))} # Create a list that contains all important information about ongoing calculations
+    items_and_status = {'items': items,'started': np.zeros(len(items)),'finished': np.zeros(len(items)),'not_converged':(np.zeros(itemtot)),'extinguished':(np.zeros(itemtot)),'time':(np.zeros(itemtot)),'by_cpu':(np.zeros(itemtot)),'priority':(np.ones(itemtot))} # Create a list that contains all important information about ongoing calculations
     items_and_status = pd.DataFrame(data=items_and_status) # Goes into a dataframe
     nb_of_finished_flames=0 # initialise nb of finished & started flames
     nb_of_started_flames=0 # initialise nb of finished & started flames
@@ -180,11 +180,17 @@ def initialize_master_1D_flame(items,comm,ncpu):
 
 def master_intention_is_data(comm,talking_to_cpu,items_and_status,results):
     new_result = receive_msg_from_proc(comm,talking_to_cpu,3) # Received results from talking to cpu 
+    sys.stdout.flush()
+    if new_result[0]['T'][0] == np.Inf: # if T flame == 10 000 , flame has nos converged or cantera error
+       items_and_status['not_converged'] = np.where( (items_and_status['by_cpu']==talking_to_cpu) & (items_and_status['started']==1) & (items_and_status['finished']==0) , 1 , items_and_status['not_converged']) # Stores the information about not converged flame
+    elif new_result[0]['T'][0] == np.NaN: # if T flame == 20 000 , flame is extinguished 
+        items_and_status['extinguished'] = np.where( (items_and_status['by_cpu']==talking_to_cpu) & (items_and_status['started']==1) & (items_and_status['finished']==0) , 1 , items_and_status['extinguished']) # Stores the information about extinguished flame
     results += new_result # Add new results to the lsit of results 
     runtime = receive_msg_from_proc(comm,talking_to_cpu,4) # Receive runtim from talking to cpu
     items_and_status['time'] = np.where( (items_and_status['by_cpu']==talking_to_cpu) & (items_and_status['started']==1) & (items_and_status['finished']==0) , runtime , items_and_status['time']) # Stores the run time of this flame in items and status
     items_and_status['finished'] = np.where( (items_and_status['by_cpu']==talking_to_cpu) & (items_and_status['started']==1) & (items_and_status['finished']==0) , 1 , items_and_status['finished']) # Declare flame as finished in items and status
 
+        
     return items_and_status
 
 def master_intention_is_available(comm,items_and_status,talking_to_cpu,itemtot,nb_of_started_flames):

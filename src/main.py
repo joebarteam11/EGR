@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
         temptlist = [300,305,310,320] #[i for i in np.arange(290,305,100.0)]
         presslist= [1E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [0.85] #[0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] 
+        phirange = [0.85,0.1] #[0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] 
         fuelblendrange = [i for i in np.arange(0.0,0.301,0.100)] # [0]#
         egrrange = [i for i in np.arange(0.0,0.301,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo

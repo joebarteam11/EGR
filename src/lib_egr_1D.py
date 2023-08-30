@@ -233,6 +233,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
             if(verbose>1):
                 logprint('Inlet composition before f.solve',f.inlet.X)
             f.solve(loglevel, refine_grid='disabled')
+            T_flamme = f.T[-1]
             if(real_egr):
                 XCO2_2 = f.X[index,-1]
                 residuals.append(np.abs(XCO2_1-XCO2_2))
@@ -252,12 +253,17 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
                 logprint('Cannot save flame to file '+flamename)
 
         except FlameExtinguished:
+            T_flamme= np.NaN
             logprint('Flame '+flamename +': ')
             logprint('Flame extinguished')
             
+            break
+
         except ct.CanteraError as e:
+            T_flamme = np.Inf
             logprint('Flame '+flamename +': ')
             logprint(('Error occurred while solving: (ite 7)', e))
+            break
 
         if(real_egr):
             last_residual = abs(residuals[-1]-residuals[-2])
@@ -267,12 +273,15 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
             break
         #print('last residual',last_residual)
         if(last_residual<1e-9):
+            T_flamme = f.T[-1]
             #print('BREAK HERE')
             break
         i+=1
         if(i>maxegrate_iter):
-            raise Exception('Too many iterations of solve_flame for real_egr loop, cannot converge')
-    return f
+            T_flamme = np.Inf
+            logprint('Too many iterations of solve_flame for real_egr loop, for flame ',hash,' cannot converge')
+            break
+    return f,T_flamme
 
 def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=True,T_reinj=None,species = ['CH4','O2','CO2','H2O'],vars=['EGR','FB','phi','AF','P','Tin','T','u','dF','rhoGF','rhoGB']):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
@@ -328,7 +337,7 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
     #print('Inlet composition (mol)',f.inlet.X)
     #print('Inlet composition (mass)',f.inlet.Y)
 
-    solve_flame(f,flamefile,flamename,config,phi,egr,fb,real_egr=real_egr,dry=dry,T_reinj=T_reinj)
+    f,T_flamme = solve_flame(f,flamefile,flamename,config,phi,egr,fb,real_egr=real_egr,dry=dry,T_reinj=T_reinj)
 
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
         SL0=f.velocity[0]
@@ -343,7 +352,7 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
         phi = get_equivalence_ratio(config,f,fb)
 
     index = [f.gas.species_index(specie) for specie in species]
-    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, f.T[-1],SL0,flamme_thickness(f),f.density[0],f.density[-1]]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, T_flamme,SL0,flamme_thickness(f),f.density[0],f.density[-1]]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
 
     return df
 
