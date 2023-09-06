@@ -36,11 +36,11 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
 
-        temptlist = [300,305,310,320] #[i for i in np.arange(290,305,100.0)]
+        temptlist = [300] #[i for i in np.arange(290,305,100.0)]
         presslist= [1E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [0.85,0.1] #[0.7,0.8,0.9,1.0,1.05,1.1,1.2]#[i for i in np.arange(0.705,1.305,0.100)] 
-        fuelblendrange = [i for i in np.arange(0.0,0.301,0.100)] # [0]#
-        egrrange = [i for i in np.arange(0.0,0.301,0.1)]
+        phirange =  [0.7,0.75,0.8,0.85,0.9,1.0,1.1,1.2]# [i for i in np.arange(0.7,1.21,0.1)]#[0.85,0.1] #
+        fuelblendrange = [0]#[i for i in np.arange(0.0,0.301,0.100)] # 
+        egrrange = [0]#[i for i in np.arange(0.0,0.301,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     temptlist,                    #tin fuel
                     presslist,                    #pin fuel
@@ -56,7 +56,8 @@ if __name__ == '__main__':
                     'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
                     path+'schemes/CH4_15_256_9_AP.cti', #mechanism file
-                    'AVBP', #transport model
+                    #'gri30.cti',
+                    'Mix', #transport model
                     'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
                     )
         
@@ -80,9 +81,9 @@ if __name__ == '__main__':
 
     restart_rate = None
     if (real_egr):
-        save_file_name = path + "/results/" + dim + "REAL_EGR" + ".csv"
+        save_file_name = path + "/results/" + dim + "REAL_EGR_AP" + ".csv"
     else:
-        save_file_name = path + "/results/" + dim + "NO_EGR" + ".csv"
+        save_file_name = path + "/results/" + dim + "NO_EGR_AP" + ".csv"
 
     if ncpu==1:
         if MPI_LOADED:

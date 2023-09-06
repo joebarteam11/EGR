@@ -289,8 +289,8 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
     vartosave = vars+species
     df =  pd.DataFrame(columns=vartosave)
 
-    tol_ss = [2.0e-7, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
-    tol_ts = [2.0e-7, 1.0e-9]  # tolerance [rtol atol] for time stepping
+    tol_ss = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
+    tol_ts = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for time stepping
 
     #create the gas object containing the mixture of fuel, ox and egr and all thermo data
     _, config.gas.fuels = create_reservoir(config,config.compo.fuels,tin[0], pin[0],blend_ratio=fb)
@@ -329,10 +329,10 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
 
     if(real_egr):
         f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
-    # else:
-    #     f.inlet.T = T
-    #     f.P = P
-    #     f.inlet.X = X
+    else:
+        f.inlet.T = T
+        f.P = P
+        f.inlet.X = X
 
     #print('Inlet composition (mol)',f.inlet.X)
     #print('Inlet composition (mass)',f.inlet.Y)
@@ -346,7 +346,7 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
 
     omega0=compute_omega0(f)
     #f.write_AVBP(path+'/'+'CH4_phi073'+'.csv')
-    print("Mean molecular weight: ",f.gas.mean_molecular_weight)
+    #print("Mean molecular weight: ",f.gas.mean_molecular_weight)
 
     if(real_egr):
         phi = get_equivalence_ratio(config,f,fb)
