@@ -36,19 +36,21 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
 
-        temptlist = [300] #[i for i in np.arange(290,305,100.0)]
-        presslist= [1E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange =  [0.7,0.75,0.8,0.85,0.9,1.0,1.1,1.2]# [i for i in np.arange(0.7,1.21,0.1)]#[0.85,0.1] #
+        templistOx = [573] #[i for i in np.arange(290,305,100.0)]
+        templistFuel = [343] #[i for i in np.arange(290,305,100.0)]
+        templistEGR = templistOx
+        presslist= [5.01325E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
+        phirange =  [i for i in np.arange(0.601,1.402,0.1)]#[0.85,0.1] # [0.6]
         fuelblendrange = [0]#[i for i in np.arange(0.0,0.301,0.100)] # 
-        egrrange = [0]#[i for i in np.arange(0.0,0.301,0.1)]
+        egrrange = [0.0,0.1,0.2]#[i for i in np.arange(0.0,0.301,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
-                    temptlist,                    #tin fuel
+                    templistFuel,                    #tin fuel
                     presslist,                    #pin fuel
                     'O2:1.0 N2:3.76',              #ox compo
-                    temptlist,                    #tin ox
+                    templistOx,                    #tin ox
                     presslist,                    #pin ox
                     'CO2:1.0',                     #egr compo
-                    temptlist,                    #tin egr
+                    templistEGR,                    #tin egr
                     presslist,                    #pin egr
                     phirange,                     #[i for i in np.arange(0.60,2.51,0.1)],        #phi range
                     fuelblendrange,
@@ -74,16 +76,16 @@ if __name__ == '__main__':
     dim='1D'
     time_formated = time.strftime("%Y%m%d-%H%M%S")
     optimise_mpi_flame_order = False
-    species_bg_output = ['O2','CO','CO2']
+    species_bg_output = ['CH4','H2','O2','CO','CO2','H2O','N2']
     real_egr = False
     dry=True
-    T_reinj=300
+    T_reinj=573
 
     restart_rate = None
     if (real_egr):
-        save_file_name = path + "/results/" + dim + "REAL_EGR_AP" + ".csv"
+        save_file_name = path + "/results/" + dim + "REAL_EGR_AP_M12" + ".csv"
     else:
-        save_file_name = path + "/results/" + dim + "NO_EGR_AP" + ".csv"
+        save_file_name = path + "/results/" + dim + "CO2_AP5bar_M12" + ".csv"
 
     if ncpu==1:
         if MPI_LOADED:

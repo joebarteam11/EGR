@@ -14,7 +14,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     verbose = 1
     loglevel  = 0                      # amount of diagnostic output (0 to 5)	    
     refine_grid = 'refine' #True                  # True to enable refinement, False to disable 	
-    f.max_time_step_count=50000
+    f.max_time_step_count=75000
     f.max_grid_points=1000
     
     # first iteration

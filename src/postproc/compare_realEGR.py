@@ -13,14 +13,15 @@ print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 Ncurves = 3
 files=[
-    '/1DNO_EGR_Aramco13.csv',
-    '/1DCO2_Aramco13.csv',
-    '/1DREAL_EGR_Aramco13.csv',
-    '/1DNO_EGR_AP.csv',
-    '/1DCO2_AP.csv',
-    '/1DREAL_EGR_AP.csv',
+    # '/1DNO_EGR_Aramco13.csv',
+    # '/1DCO2_Aramco13.csv',
+    # '/1DREAL_EGR_Aramco13.csv',
+    # '/1DNO_EGR_AP.csv',
+    # '/1DCO2_AP.csv',
+    # '/1DREAL_EGR_AP.csv',
+    #'/1DNO_EGR_H2_AP.csv',
     #'/1DREAL_EGR_EGR_0.1.csv',
-    #'/1DCO2_EGR_0.1.csv',
+    '/1DCO2_AP_M12.csv',
     #'/CH4_15_256_9_AP.csv',
 ]
 files=[path+
@@ -84,7 +85,7 @@ for i,var in enumerate(var_to_plot):
         label = [r'$\ X_{EGR}^{fuel}$'+':'+str(val[0])+' '+'('+mech[j%3]+')'
                  #str(data.columns.names[1])+ 
                  #X,'H2' as index and 'fuel' as exponent
-                 #+r'$\ X_{H2}^{fuel}$'+':'+str(val[1]) 
+                 +r'$\ X_{H2}^{fuel}$'+':'+str(val[1]) 
                  for val in data.columns.values]
         
         if(j<Ncurves):
@@ -113,11 +114,11 @@ for i,var in enumerate(var_to_plot):
     # for k,_ in enumerate(inputs):
     #     #try:
     #     if(i<Ncurves):    
+    # ax2.plot([],[],symbols[0],
+    #         label='Detailed', 
+    #         c='black',
+    #         )
     ax2.plot([],[],symbols[0],
-            label='Detailed', 
-            c='black',
-            )
-    ax2.plot([],[],symbols[3],
         label='ARC (AP)', 
         c='black',
         )
@@ -136,7 +137,7 @@ for i,var in enumerate(var_to_plot):
     #                         'lines.markersize': 15,
     #                         })
     plt.savefig(path+'/img/'+
-                'COMP_EGRtypes_GRI30_ARC'+
+                'M12_gri_CO2'+
                 '_'+var+'.png')
 
     

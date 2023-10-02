@@ -156,7 +156,7 @@ def stoechiometric_ratios(config):
         
     return sx,n_mole_ox,mw_ox
 
-def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',egr_def='%egr/%fuel'): 
+def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',egr_def='%egr/all'): 
     mw_fuel = config.gas.fuels.mean_molecular_weight/1000 #kg/mol
     mw_oxidizer = config.gas.ox.mean_molecular_weight/1000 #kg/mol
     mw_egr = config.gas.egr.mean_molecular_weight/1000 #kg/mol
@@ -372,13 +372,14 @@ def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
 
 
     if(dry):
-        index = f.gas.species_index('H2O')
-        dry_egr = config.gas.egr.X
-        dry_egr[index] = 0.0
-        coef = 1/sum(dry_egr)
-        dry_egr = [coef*i for i in dry_egr]
+        # index = f.gas.species_index('H2O')
+        # dry_egr = config.gas.egr.X
+        # dry_egr[index] = 0.0
+        # coef = 1/sum(dry_egr)
+        # dry_egr = [coef*i for i in dry_egr]
+        dry_egr = dryer(config,f)
         config.gas.egr.X = dry_egr
-        
+
         logprint('EGR composition AFTER drying operation',)
         for i,specie in enumerate(species_names):
                 logprint(f"{specie}: {config.gas.egr.X[i]:.6e} X[mol]")
@@ -405,3 +406,22 @@ def generate_unique_filename(config,flame):
     uid = hash_object.hexdigest()
 
     return parameter_str,uid
+
+def dryer(config,f):
+    idx_h2o = f.gas.species_index('H2O')
+
+    X_todry = config.gas.egr.X
+    X_fg = f.inlet.X
+    X_h2o_bg = X_todry[idx_h2o]
+    #print('H2O in burned gas: ',X_h2o_bg)
+    X_h2o_fg = X_fg[idx_h2o]
+    #print('H2O in fresh gas: ',X_h2o_fg)
+    X_cond = abs(X_h2o_bg - X_h2o_fg) / (1 - X_h2o_fg)
+    X_h2o_remaining = (X_h2o_fg - X_cond) / (1-X_cond)
+    #scale everything
+    X_dry = [X * (1 - X_h2o_bg)/(1-X_h2o_fg) for X in X_todry]
+    #correction for H2O (which does have to be scaled)
+    X_dry[idx_h2o] = X_h2o_remaining
+
+    #print('dried EGR: ',X_dry[idx_h2o])
+    return X_dry
