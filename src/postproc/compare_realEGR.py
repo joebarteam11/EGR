@@ -21,7 +21,7 @@ files=[
     # '/1DREAL_EGR_AP.csv',
     #'/1DNO_EGR_H2_AP.csv',
     #'/1DREAL_EGR_EGR_0.1.csv',
-    '/1DCO2_AP_M12.csv',
+    '/1DCO2_AP5bar_M12.csv',
     #'/CH4_15_256_9_AP.csv',
 ]
 files=[path+
@@ -137,7 +137,7 @@ for i,var in enumerate(var_to_plot):
     #                         'lines.markersize': 15,
     #                         })
     plt.savefig(path+'/img/'+
-                'M12_gri_CO2'+
+                'M12_AP5bar_CO2'+
                 '_'+var+'.png')
 
     

@@ -40,8 +40,8 @@ if __name__ == '__main__':
         templistFuel = [343] #[i for i in np.arange(290,305,100.0)]
         templistEGR = templistOx
         presslist= [5.01325E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange =  [i for i in np.arange(0.601,1.402,0.1)]#[0.85,0.1] # [0.6]
-        fuelblendrange = [0]#[i for i in np.arange(0.0,0.301,0.100)] # 
+        phirange =  [i for i in np.arange(0.601,1.406,0.1)]#[0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
+        fuelblendrange = [0.0]#[i for i in np.arange(0.0,0.301,0.100)] # 
         egrrange = [0.0,0.1,0.2]#[i for i in np.arange(0.0,0.301,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     templistFuel,                    #tin fuel
