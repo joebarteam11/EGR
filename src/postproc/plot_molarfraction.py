@@ -68,7 +68,7 @@ for i,phi in enumerate(phis) :
             #extract a list of phi values in files names
 
 
-            title = 'Mole fractions (outlet) of species at Phi={} '.format(phi)+' ('+r"$\bf{"+'T_{in}CO2:'+str(300)+'K'+ "}$"+')'+" - P:{}bar".format(p)
+            title = 'Mole fractions (outlet) of species at Phi={} '.format(phi)+' ('+r"$\bf{"+'T_{in}CO2:'+str(573)+'K'+ "}$"+')'+" - P:{}bar".format(p)
             fs=20
 
             if(n==0):

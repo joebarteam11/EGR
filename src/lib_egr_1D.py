@@ -14,7 +14,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     verbose = 1
     loglevel  = 0                      # amount of diagnostic output (0 to 5)	    
     refine_grid = 'refine' #True                  # True to enable refinement, False to disable 	
-    f.max_time_step_count=50000
+    f.max_time_step_count=75000
     f.max_grid_points=1000
     auto = False
 
@@ -42,7 +42,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         try:
             if(verbose>1):
                 logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid, auto=True)
+            f.solve(loglevel, refine_grid, auto=False)
             
             if(real_egr):
                 XCO2_1 = f.X[index,-1]
@@ -58,13 +58,13 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         except ct.CanteraError as e:
             logprint('Flame '+flamename +': ')
             logprint(('Error occurred while solving: (ite 1) \n', e))
-            
+        
         # Second iteration
         #################
         # Energy equation activated
         f.energy_enabled = True
         # mesh refinement
-        f.set_refine_criteria(ratio = 7.5, slope = 0.85, curve = 0.85)
+        f.set_refine_criteria(ratio = 7.5, slope = 0.75, curve = 0.75)
         # Calculation
         if(verbose>0):
             if(verbose>1):
@@ -75,7 +75,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         try:
             if(verbose>1):
                 logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid, auto=auto)
+            f.solve(loglevel, refine_grid, auto=False)
             
             if(real_egr):
                 XCO2_2 = f.X[index,-1]
@@ -169,7 +169,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         try:
             if(verbose>1):
                 logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid)
+            f.solve(loglevel, refine_grid, auto=auto)
             if(real_egr):
                 XCO2_2 = f.X[index,-1]
                 residuals.append(np.abs(XCO2_1-XCO2_2))
@@ -203,7 +203,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         try:
             if(verbose>1):
                 logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid='disabled')
+            f.solve(loglevel, refine_grid='disabled', auto=auto)
             if(real_egr):
                 XCO2_2 = f.X[index,-1]
                 residuals.append(np.abs(XCO2_1-XCO2_2))
@@ -234,7 +234,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         try:
             if(verbose>1):
                 logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid='disabled')
+            f.solve(loglevel, refine_grid='disabled', auto=auto)
             T_flamme = f.T[-1]
             if(real_egr):
                 XCO2_2 = f.X[index,-1]

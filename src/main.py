@@ -39,10 +39,10 @@ if __name__ == '__main__':
         templistOx = [573] #[i for i in np.arange(290,305,100.0)]
         templistFuel = [343] #[i for i in np.arange(290,305,100.0)]
         templistEGR = templistOx
-        presslist= [5.01325E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange =  [i for i in np.arange(0.601,1.406,0.1)]#[0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
+        presslist= [1.01325E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
+        phirange =  [i for i in np.arange(0.605,1.406,0.1)]#[0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
         fuelblendrange = [0.0]#[i for i in np.arange(0.0,0.301,0.100)] # 
-        egrrange = [0.0,0.1,0.2]#[i for i in np.arange(0.0,0.301,0.1)]
+        egrrange = [0.2]#[i for i in np.arange(0.0,0.301,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     templistFuel,                    #tin fuel
                     presslist,                    #pin fuel
@@ -77,15 +77,15 @@ if __name__ == '__main__':
     time_formated = time.strftime("%Y%m%d-%H%M%S")
     optimise_mpi_flame_order = False
     species_bg_output = ['CH4','H2','O2','CO','CO2','H2O','N2']
-    real_egr = False
+    real_egr = True
     dry=True
-    T_reinj=573
+    T_reinj= 573
 
     restart_rate = None
     if (real_egr):
-        save_file_name = path + "/results/" + dim + "REAL_EGR_AP_M12" + ".csv"
+        save_file_name = path + "/results/" + dim + "REAL_EGR_AP1bar2_M12" + ".csv"
     else:
-        save_file_name = path + "/results/" + dim + "CO2_AP5bar_M12" + ".csv"
+        save_file_name = path + "/results/" + dim + "CO2_AP8bar_M12" + ".csv"
 
     if ncpu==1:
         if MPI_LOADED:
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         else: 
             PRINT_MONO_CPU_WARNING_AND_MPI_NOT_LOADED()
             for i in range(50):
-                mpiprint('\n WARNING, mpi4py is not installed in you env. Please do not use mpirun -n ...',file=sys.stdout)
+                mpiprint('\n WARNING, mpi4py is not installed in your env. Please do not use mpirun -n ...',file=sys.stdout)
                 
 
         MONO_CPU_CALCULATION(items,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
