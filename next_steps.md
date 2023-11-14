@@ -12,4 +12,5 @@
 1. Tolerance, atol, rtol & a comment that says where you can edit prune, ratio, slope 
 1. Add Sx,Sy in logs
 1. Add Y & X GF dataframe de sortie
-1. 
+
+1. Pour les restore de flammes : Arthur recommande de faire directement l'itération 7 après un restore sans repasser par l'ité 1,2,3 ... Si l'ité 7 ne marche pas; repartir de l'ité 1 et faire buisness as usual haha
