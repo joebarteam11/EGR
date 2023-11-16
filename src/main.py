@@ -36,20 +36,20 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
 
-        templistOx = [393] #[i for i in np.arange(290,305,100.0)]
-        templistFuel = [393] #[i for i in np.arange(290,305,100.0)]
+        templistOx = [393] #[i for i in np.arange(290,305,10.0)]
+        templistFuel = [393] #[i for i in np.arange(290,305,10.0)]
         templistEGR = templistOx
-        presslist= [8.01325E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
+        presslist= [5.01325E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
         phirange =  [i for i in np.arange(0.605,1.206,0.1)]#[0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
         fuelblendrange = [0.0]#[i for i in np.arange(0.0,0.301,0.100)] # 
-        egrrange = [0.2]#[i for i in np.arange(0.0,0.301,0.1)]
+        egrrange = [0.1]#[i for i in np.arange(0.0,0.301,0.1)]
         config = case(['CH4:1.0','H2:1.0'],         #fuel compo
                     templistFuel,                    #tin fuel
                     presslist,                    #pin fuel
                     'O2:1.0 N2:3.76',              #ox compo
                     templistOx,                    #tin ox
                     presslist,                    #pin ox
-                    'FCO2:1.0',                     #egr compo
+                    'CO2:1.0',                     #egr compo
                     templistEGR,                    #tin egr
                     presslist,                    #pin egr
                     phirange,                     #[i for i in np.arange(0.60,2.51,0.1)],        #phi range
@@ -57,10 +57,10 @@ if __name__ == '__main__':
                     egrrange,                     #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                     'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
-                    path+'schemes/CH4_15_256_9_AP.cti',#'gri30.cti',
-                    #'gri30.cti',
+                    #path+'schemes/CH4_15_256_9_AP.cti',#'gri30.cti',
+                    'gri30.cti',
                     'Mix', #transport model
-                    'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
+                    'no',  #is an ARC chemistry ? 'ARC' = yes, other = no
                     )
         
 
@@ -77,6 +77,11 @@ if __name__ == '__main__':
     time_formated = time.strftime("%Y%m%d-%H%M%S")
     optimise_mpi_flame_order = False
     species_bg_output = ['CH4','O2','CO','CO2','H2O','N2']
+    
+    # tolerences for 1D flame solver
+    tol_ss = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
+    tol_ts = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for time stepping
+
     real_egr = False
     dry=True
     T_reinj= 573
@@ -85,7 +90,7 @@ if __name__ == '__main__':
     if (real_egr):
         save_file_name = path + "/results/" + dim + "M12_N2CO2H2OH2ReacOnly" + ".csv"
     else:
-        save_file_name = path + "/results/" + dim + "TEST_MASSFRAC_INLET" + ".csv"
+        save_file_name = path + "/results/" + dim + "TEST_optim_flame_resolution" + ".csv"
 
     if ncpu==1:
         if MPI_LOADED:
@@ -96,9 +101,9 @@ if __name__ == '__main__':
                 mpiprint('\n WARNING, mpi4py is not installed in your env. Please do not use mpirun -n ...',file=sys.stdout)
                 
 
-        MONO_CPU_CALCULATION(items,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
+        MONO_CPU_CALCULATION(items,tol_ss,tol_ts,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
     else:
-        MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
+        MPI_CALCULATION(rank_0,items,tol_ss,tol_ts,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
 
     if MPI_LOADED:
         comm.Barrier()

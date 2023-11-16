@@ -209,10 +209,10 @@ def update_requests_and_nb_of_flammes(comm,items_and_status,requests,talking_to_
     requests[talking_to_cpu-1]=comm.irecv(source=talking_to_cpu,tag=1) # Re-create a request for talking-to-cpu to receive future intentions
     return items_and_status, requests, nb_of_started_flames, nb_of_finished_flames
 
-def slave_compute_and_communicate_1D(comm,items,restart_rate,real_egr,dry,T_reinj,species,results):
+def slave_compute_and_communicate_1D(comm,items,tol_ss,tol_ts,restart_rate,real_egr,dry,T_reinj,species,results):
     proc0=int(0)
     st = time.time() # Beginning of solving flame
-    results += [compute_solutions_1D(*item,restart_rate,real_egr,dry,T_reinj,species) for item in items.iloc[:1]]
+    results += [compute_solutions_1D(*item,restart_rate,real_egr,tol_ss,tol_ts,dry,T_reinj,species) for item in items.iloc[:1]]
     et = time.time() # End of solving flame
     elapsed_time = et - st 
     mpiprint("Elapsed time for solving this flame: "+str(elapsed_time)+" seconds")
@@ -322,7 +322,7 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_na
     mpiprint(output, file=sys.stdout)
     mpiprint(items_and_status.to_string())
  
-def MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species):
+def MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species,tol_ss,tol_ts):
     proc0=int(0)
     not_end = True
     while not_end:
@@ -335,19 +335,19 @@ def MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species):
             elif dim=='0D':
                 slave_compute_and_communicate_0D(comm,items,real_egr,species)
             elif dim=='1D':
-                slave_compute_and_communicate_1D(comm,items,restart_rate,real_egr,dry,T_reinj,species,results=[])
+                slave_compute_and_communicate_1D(comm,items,tol_ss,tol_ts,restart_rate,real_egr,dry,T_reinj,species,results=[])
         else:
             not_end=False
 
-def MPI_CALCULATION(rank_0,items,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species):
+def MPI_CALCULATION(rank_0,items,tol_ss,tol_ts,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species):
     if rank_0:
         mpiprint('Number of cases: '+str(len(items)),file=sys.stdout)
         MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name)
     else:
-        MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species)
+        MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species,tol_ss,tol_ts)
 
 
-def MONO_CPU_CALCULATION(items,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species):
+def MONO_CPU_CALCULATION(items,tol_ss,tol_ts,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species):
     mpiprint('Number of cases: '+str(len(items)),file=sys.stdout)
     results = []
     if dim=='equilibrate':
@@ -357,7 +357,7 @@ def MONO_CPU_CALCULATION(items,save_file_name,dim,restart_rate,real_egr,dry,T_re
         for i in range(len(items)):
             results += [reactor_and_df[i][1]]
     elif dim=='1D':
-        results = [compute_solutions_1D(*item,restart_rate,real_egr,dry,T_reinj,species) for item in items]
+        results = [compute_solutions_1D(*item,restart_rate,real_egr,tol_ss,tol_ts,dry,T_reinj,species) for item in items]
 
     output=pd.concat(results[:],axis=0) 
     output.to_csv(save_file_name,index=False) 
