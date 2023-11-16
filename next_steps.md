@@ -9,7 +9,8 @@
 1. Work with MTG tables generation tools
 1. ~~Save the inlet mass fraction somewhere to use them in avbp SOLUTBOUND~~
 1. ~~Tester flame.solve(auto)~~
-1. Tolerance, atol, rtol & a comment that says where you can edit prune, ratio, slope 
+1. ~~Tolerance, atol, rtol~~
+1. A comment that says where you can edit prune, ratio, slope 
 1. ~~Add Sx,Sy in logs~~
 1. Add ~~Y &~~ X GF dataframe de sortie
 
