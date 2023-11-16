@@ -1,6 +1,6 @@
 from lib_egr_260 import *
 
-def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_reinj=None):
+def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_reinj=None,successful_restore=False):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...   
     
     #################################################################
@@ -33,194 +33,196 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     while(True or i<maxegrate_iter):
         #print('While loop starts')
         # Calculation
-        if(verbose>0):
-            if(verbose>1):
-                logprint('1st iteration...',file=sys.stdout)
-            else:
-                logprint('1st iteration...')
-            logprint('on flame '+ flamename)
-        try:
-            if(verbose>1):
-                logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid, auto=False)
-            
-            if(real_egr):
-                XCO2_1 = f.X[index,-1]
-                f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
-                if(verbose>0):
-                    logprint('EGR applied to inlet')
+        if(not successful_restore):
+            if(verbose>0):
+                if(verbose>1):
+                    logprint('1st iteration...',file=sys.stdout)
+                else:
+                    logprint('1st iteration...')
+                logprint('on flame '+ flamename)
+            try:
+                if(verbose>1):
+                    logprint('Inlet composition before f.solve',f.inlet.X)
+                f.solve(loglevel, refine_grid, auto=True)
                 
-            #f.save(flamefile)
-        except FlameExtinguished:
-            logprint('Flame '+flamename +': ')
-            logprint('Flame extinguished')
+                if(real_egr):
+                    XCO2_1 = f.X[index,-1]
+                    f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
+                    if(verbose>0):
+                        logprint('EGR applied to inlet')
+                    
+                #f.save(flamefile)
+            except FlameExtinguished:
+                logprint('Flame '+flamename +': ')
+                logprint('Flame extinguished')
+                
+            except ct.CanteraError as e:
+                logprint('Flame '+flamename +': ')
+                logprint(('Error occurred while solving: (ite 1) \n', e))
             
-        except ct.CanteraError as e:
-            logprint('Flame '+flamename +': ')
-            logprint(('Error occurred while solving: (ite 1) \n', e))
-        
-        # Second iteration
-        #################
-        # Energy equation activated
-        f.energy_enabled = True
-        # mesh refinement
-        f.set_refine_criteria(ratio = 7.5, slope = 0.75, curve = 0.75)
-        # Calculation
-        if(verbose>0):
-            if(verbose>1):
-                logprint('2nd iteration...',file=sys.stdout)
-            else:
-                logprint('2nd iteration...')
-            logprint('on flame '+ flamename)
-        try:
-            if(verbose>1):
-                logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid, auto=False)
-            
-            if(real_egr):
-                XCO2_2 = f.X[index,-1]
-                residuals.append(np.abs(XCO2_1-XCO2_2))
-                XCO2_1 = XCO2_2
-                f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
-                if(verbose>0):
-                    logprint('EGR applied to inlet')
-            #f.save(flamefile)
-        except FlameExtinguished:
-            logprint('Flame '+flamename +': ')
-            logprint('Flame extinguished')
-            
-        except ct.CanteraError as e:
-            logprint('Flame '+flamename +': ')
-            logprint(('Error occurred while solving: (ite 2)', e))
-            
-        # Third iteration
-        #################
-        # On raffine le maillage
-        f.set_refine_criteria(ratio = 5.0, slope = 0.4, curve = 0.4, prune = 0.03)
-        # Calculation
-        if(verbose>0):
-            if(verbose>1):
-                logprint('3rd iteration...',file=sys.stdout)
-            else:
-                logprint('3rd iteration...')
-            logprint('on flame '+ flamename)
-        try:
-            if(verbose>1):
-                logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid, auto=auto)
-            if(real_egr):
-                XCO2_2 = f.X[index,-1]
-                residuals.append(np.abs(XCO2_1-XCO2_2))
-                XCO2_1 = XCO2_2
-                f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
-                if(verbose>0):
-                    logprint('EGR applied to inlet')
-            #f.save(flamefile)
-        except FlameExtinguished:
-            logprint('Flame '+flamename +': ')
-            logprint('Flame extinguished')
-            
-        except ct.CanteraError as e:
-            logprint('Flame '+flamename +': ')
-            logprint(('Error occurred while solving: (ite 3)', e))
-            
-        #################
-        # Fourth iteration
-        # Mesh refinement
-        f.set_refine_criteria(ratio = 5.0, slope = 0.1, curve = 0.1, prune = 0.01)
-        # Calculation
-        if(verbose>0):
-            if(verbose>1):
-                logprint('4th iteration...',file=sys.stdout)
-            else:  
-                logprint('4th iteration...')
-            logprint('on flame '+ flamename)
-        try:
-            if(verbose>1):
-                logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid, auto=auto)
-            if(real_egr):
-                XCO2_2 = f.X[index,-1]
-                residuals.append(np.abs(XCO2_1-XCO2_2))
-                XCO2_1 = XCO2_2
-                f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
-                if(verbose>0):
-                    logprint('EGR applied to inlet')
-            #f.save(flamefile)
-        except FlameExtinguished:
-            logprint('Flame '+flamename +': ')
-            logprint('Flame extinguished')
-            
-        except ct.CanteraError as e:
-            logprint('Flame '+flamename +': ')
-            logprint(('Error occurred while solving: (ite 4)', e))
-            
-        # Fifth iteration
-        #################
-        #Mesh refinement
-        f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
-        # Calculation
-        if(verbose>0):
-            if(verbose>1):
-                logprint('5th iteration...',file=sys.stdout)
-            else:
-                logprint('5th iteration...')
-            logprint('on flame '+ flamename)
-        try:
-            if(verbose>1):
-                logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid, auto=auto)
-            if(real_egr):
-                XCO2_2 = f.X[index,-1]
-                residuals.append(np.abs(XCO2_1-XCO2_2))
-                XCO2_1 = XCO2_2
-                f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
-                if(verbose>0):
-                    logprint('EGR applied to inlet')
-            # try:
-            #     f.write_hdf(flamefile)
-            # except:
-            #     f.save(flamefile[:-3]+'.yaml')
-        except FlameExtinguished:
-            logprint('Flame '+flamename +': ')
-            logprint('Flame extinguished')
-            
-        except ct.CanteraError as e:
-            logprint('Flame '+flamename +': ')
-            logprint(('Error occurred while solving: (ite 5)', e))
-        # # Sixth iteration
-        #################
-        #NO Mesh refinement
-        f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
-        # Calculation
-        if(verbose>0):
-            if(verbose>1):
-                logprint('6th iteration...',file=sys.stdout)
-            else:
-                logprint('6th iteration...')
-            logprint('on flame '+ flamename)
-            
-        try:
-            if(verbose>1):
-                logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid='disabled', auto=auto)
-            if(real_egr):
-                XCO2_2 = f.X[index,-1]
-                residuals.append(np.abs(XCO2_1-XCO2_2))
-                XCO2_1 = XCO2_2
-                f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
-                if(verbose>0):
-                    logprint('EGR applied to inlet')
-            #f.save(flamefile)
-        except FlameExtinguished:
-            logprint('Flame '+flamename +': ')
-            logprint('Flame extinguished')
-            
-        except ct.CanteraError as e:
-            logprint('Flame '+flamename +': ')
-            logprint(('Error occurred while solving: (ite 6)', e))
-        
-        # # Seventh iteration
+            # Second iteration
+            #################
+            # Energy equation activated
+            f.energy_enabled = True
+            # mesh refinement
+            f.set_refine_criteria(ratio = 7.5, slope = 0.75, curve = 0.75)
+            # Calculation
+            if(verbose>0):
+                if(verbose>1):
+                    logprint('2nd iteration...',file=sys.stdout)
+                else:
+                    logprint('2nd iteration...')
+                logprint('on flame '+ flamename)
+            try:
+                if(verbose>1):
+                    logprint('Inlet composition before f.solve',f.inlet.X)
+                f.solve(loglevel, refine_grid, auto=False)
+                
+                if(real_egr):
+                    XCO2_2 = f.X[index,-1]
+                    residuals.append(np.abs(XCO2_1-XCO2_2))
+                    XCO2_1 = XCO2_2
+                    f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
+                    if(verbose>0):
+                        logprint('EGR applied to inlet')
+                #f.save(flamefile)
+            except FlameExtinguished:
+                logprint('Flame '+flamename +': ')
+                logprint('Flame extinguished')
+                
+            except ct.CanteraError as e:
+                logprint('Flame '+flamename +': ')
+                logprint(('Error occurred while solving: (ite 2)', e))
+                
+            # Third iteration
+            #################
+            # On raffine le maillage
+            f.set_refine_criteria(ratio = 5.0, slope = 0.4, curve = 0.4, prune = 0.03)
+            # Calculation
+            if(verbose>0):
+                if(verbose>1):
+                    logprint('3rd iteration...',file=sys.stdout)
+                else:
+                    logprint('3rd iteration...')
+                logprint('on flame '+ flamename)
+            try:
+                if(verbose>1):
+                    logprint('Inlet composition before f.solve',f.inlet.X)
+                f.solve(loglevel, refine_grid, auto=auto)
+                if(real_egr):
+                    XCO2_2 = f.X[index,-1]
+                    residuals.append(np.abs(XCO2_1-XCO2_2))
+                    XCO2_1 = XCO2_2
+                    f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
+                    if(verbose>0):
+                        logprint('EGR applied to inlet')
+                #f.save(flamefile)
+            except FlameExtinguished:
+                logprint('Flame '+flamename +': ')
+                logprint('Flame extinguished')
+                
+            except ct.CanteraError as e:
+                logprint('Flame '+flamename +': ')
+                logprint(('Error occurred while solving: (ite 3)', e))
+                
+            #################
+            # Fourth iteration
+            # Mesh refinement
+            f.set_refine_criteria(ratio = 5.0, slope = 0.1, curve = 0.1, prune = 0.01)
+            # Calculation
+            if(verbose>0):
+                if(verbose>1):
+                    logprint('4th iteration...',file=sys.stdout)
+                else:  
+                    logprint('4th iteration...')
+                logprint('on flame '+ flamename)
+            try:
+                if(verbose>1):
+                    logprint('Inlet composition before f.solve',f.inlet.X)
+                f.solve(loglevel, refine_grid, auto=auto)
+                if(real_egr):
+                    XCO2_2 = f.X[index,-1]
+                    residuals.append(np.abs(XCO2_1-XCO2_2))
+                    XCO2_1 = XCO2_2
+                    f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
+                    if(verbose>0):
+                        logprint('EGR applied to inlet')
+                #f.save(flamefile)
+            except FlameExtinguished:
+                logprint('Flame '+flamename +': ')
+                logprint('Flame extinguished')
+                
+            except ct.CanteraError as e:
+                logprint('Flame '+flamename +': ')
+                logprint(('Error occurred while solving: (ite 4)', e))
+                
+            # Fifth iteration
+            #################
+            #Mesh refinement
+            f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
+            # Calculation
+            if(verbose>0):
+                if(verbose>1):
+                    logprint('5th iteration...',file=sys.stdout)
+                else:
+                    logprint('5th iteration...')
+                logprint('on flame '+ flamename)
+            try:
+                if(verbose>1):
+                    logprint('Inlet composition before f.solve',f.inlet.X)
+                f.solve(loglevel, refine_grid, auto=auto)
+                if(real_egr):
+                    XCO2_2 = f.X[index,-1]
+                    residuals.append(np.abs(XCO2_1-XCO2_2))
+                    XCO2_1 = XCO2_2
+                    f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
+                    if(verbose>0):
+                        logprint('EGR applied to inlet')
+                # try:
+                #     f.write_hdf(flamefile)
+                # except:
+                #     f.save(flamefile[:-3]+'.yaml')
+            except FlameExtinguished:
+                logprint('Flame '+flamename +': ')
+                logprint('Flame extinguished')
+                
+            except ct.CanteraError as e:
+                logprint('Flame '+flamename +': ')
+                logprint(('Error occurred while solving: (ite 5)', e))
+            # # Sixth iteration
+            #################
+            #NO Mesh refinement
+            f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
+            # Calculation
+            if(verbose>0):
+                if(verbose>1):
+                    logprint('6th iteration...',file=sys.stdout)
+                else:
+                    logprint('6th iteration...')
+                logprint('on flame '+ flamename)
+                
+            try:
+                if(verbose>1):
+                    logprint('Inlet composition before f.solve',f.inlet.X)
+                f.solve(loglevel, refine_grid='disabled', auto=auto)
+                if(real_egr):
+                    XCO2_2 = f.X[index,-1]
+                    residuals.append(np.abs(XCO2_1-XCO2_2))
+                    XCO2_1 = XCO2_2
+                    f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
+                    if(verbose>0):
+                        logprint('EGR applied to inlet')
+                #f.save(flamefile)
+            except FlameExtinguished:
+                logprint('Flame '+flamename +': ')
+                logprint('Flame extinguished')
+                
+            except ct.CanteraError as e:
+                logprint('Flame '+flamename +': ')
+                logprint(('Error occurred while solving: (ite 6)', e))
+        else:
+            logprint('Successful restore, skipping iterations 1 to 6')
+        # Seventh iteration
         #################
         #NO Mesh refinement
         f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
@@ -288,11 +290,10 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
 def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=True,T_reinj=None,species = ['CH4','O2','CO2','H2O'],vars=['EGR','FB','phi','AF','P','Tin','T','u','dF','rhoGF','rhoGB']):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     path = os.getcwd()+'/src'
-    vartosave = vars+species
-    df =  pd.DataFrame(columns=vartosave)
 
-    tol_ss = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
-    tol_ts = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for time stepping
+
+    tol_ss = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
+    tol_ts = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for time stepping
 
     #create the gas object containing the mixture of fuel, ox and egr and all thermo data
     _, config.gas.fuels = create_reservoir(config,config.compo.fuels,tin[0], pin[0],blend_ratio=fb)
@@ -316,10 +317,12 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
     logprint('Flame hash: '+hash)
 
     flamefile = path+'/data/'+hash+'.yaml'
+    successful_restore = False
     if os.path.isfile(flamefile):
         logprint('Flame file '+flamefile+' is found')
         try:
             f.restore(flamefile, loglevel=1)
+            successful_restore =True
             logprint('Flame restored from file '+flamefile)
         except:
             logprint('Cannot restore flame from file '+flamefile)
@@ -336,10 +339,12 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
         f.P = P
         f.inlet.X = X
 
-    #print('Inlet composition (mol)',f.inlet.X)
-    #print('Inlet composition (mass)',f.inlet.Y)
+    alpha,beta=alpha_beta(f)
+    #print('Alpha, beta',alpha_beta(f))
+    #logprint('Inlet composition (mol)',f.inlet.X)
+    #logprint('Inlet composition (mass)',f.inlet.Y)
 
-    f,T_flamme = solve_flame(f,flamefile,flamename,config,phi,egr,fb,real_egr=real_egr,dry=dry,T_reinj=T_reinj)
+    f,T_flamme = solve_flame(f,flamefile,flamename,config,phi,egr,fb,real_egr=real_egr,dry=dry,T_reinj=T_reinj,successful_restore=successful_restore)
 
     if(version.parse(ct.__version__) >= version.parse('2.5.0')):
         SL0=f.velocity[0]
@@ -352,9 +357,22 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,dry=Tru
 
     if(real_egr):
         phi = get_equivalence_ratio(config,f,fb)
+    
+    iCH4 = f.X[f.gas.species_index('CH4'),0]
+    iN2 = f.X[f.gas.species_index('N2'),0]
+    iCO2 = f.X[f.gas.species_index('CO2'),0]
+    iH2O = f.X[f.gas.species_index('H2O'),0]
 
+    #for all non zero massfractions at inlet, build a list of species names and associated mass fractions
+    i_species_names = ['Yi_'+specie for specie in f.gas.species_names if f.inlet.Y[f.gas.species_index(specie)] != 0.0]
+    logprint('i_species_names',i_species_names)
+    i_species_massfractions = [f.inlet.Y[f.gas.species_index(specie)] for specie in f.gas.species_names if f.inlet.Y[f.gas.species_index(specie)] != 0.0]
+    logprint('i_species_massfractions',i_species_massfractions)
+
+    vartosave = vars+i_species_names+species
+    df =  pd.DataFrame(columns=vartosave)
     index = [f.gas.species_index(specie) for specie in species]
-    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, T_flamme,SL0,flamme_thickness(f),f.density[0],f.density[-1]]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, T_flamme,SL0,flamme_thickness(f),f.density[0],f.density[-1],]+i_species_massfractions+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
 
     return df
 
@@ -410,6 +428,9 @@ def compute_omega0(f):
     else:
         raise Exception('Cannot compute omega0 with cantera version '+ct.__version__+' (must be 2.3.0) or must be implemented for newer versions')
     
+def alpha_beta(f):
+    return f.X[f.gas.species_index('H2O'),0]/f.X[f.gas.species_index('O2'),0], f.X[f.gas.species_index('N2'),0]/f.X[f.gas.species_index('O2'),0]
+    
 def get_equivalence_ratio(config,f,blend_ratio):
     fuel_mol=0.0
     for fuel in config.compo.fuels:
@@ -424,6 +445,67 @@ def get_equivalence_ratio(config,f,blend_ratio):
 
     phi = Sx*fuel_mol/f.inlet.X[f.gas.species_index('O2')]
     #print('ox',f.inlet.X[f.gas.species_index('O2')])
-    #print('phi',phi)
-    
+    logprint('Applied phi',phi)
+
     return phi
+
+def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
+    config.gas.egr.X = f.X[:,-1]
+    logprint("-----------------------------------------")
+    logprint('EGR composition BEFORE drying operation',)
+    species_names = config.gas.egr.species_names
+    for i,specie in enumerate(species_names):
+            logprint(f"{specie}: {config.gas.egr.X[i]:.6e} X[mol]")
+
+
+    if(dry):
+        # index = f.gas.species_index('H2O')
+        # dry_egr = config.gas.egr.X
+        # dry_egr[index] = 0.0
+        # coef = 1/sum(dry_egr)
+        # dry_egr = [coef*i for i in dry_egr]
+        dry_egr = dryer(config,f,T_reinj)
+        config.gas.egr.X = dry_egr
+
+        logprint('EGR composition AFTER drying operation',)
+        for i,specie in enumerate(species_names):
+                logprint(f"{specie}: {config.gas.egr.X[i]:.6e} X[mol]")
+    #keep only N2
+    #config.gas.egr.X = [0.0 if specie != 'N2' else 1.0 for specie in species_names]
+    
+    # #keep N2 and CO2=1-X_N2
+    # temp = [0.0 if specie != 'N2' else config.gas.egr.X[species_names.index('N2')] for specie in species_names]
+    # temp = [1-temp[species_names.index('N2')] if (specie == 'CO2') else temp[species_names.index(specie)] for specie in species_names ]
+    # config.gas.egr.X = temp
+    # #keep N2 and CO2 and H2O=1-X_N2-X_CO2
+    # temp = [0.0 if specie != 'N2' else config.gas.egr.X[species_names.index('N2')] for specie in species_names]
+    # temp = [config.gas.egr.X[species_names.index('CO2')] if (specie == 'CO2') else temp[species_names.index(specie)] for specie in species_names ]
+    # temp = [1-temp[species_names.index('N2')]-temp[species_names.index('CO2')] if (specie == 'H2O') else temp[species_names.index(specie)] for specie in species_names ]
+    # config.gas.egr.X = temp
+    
+    # #keep N2 and CO2 and H2O and O2 or CH4
+    # phi = get_equivalence_ratio(config,f,fb)
+    # temp = [config.gas.egr.X[species_names.index(specie)] if specie in ['N2','CO2','H2O','H2'] else 0.0 for specie in species_names]
+    # sum = np.sum(temp)
+    # if phi<1:
+    #     spec= 'O2'
+    # else:
+    #     spec= 'CH4'
+    # temp = [1-sum if (specie == spec) else temp[species_names.index(specie)] for specie in species_names ]
+   
+    #temp = [1-sum if (specie == 'CH4') else temp[species_names.index(specie)] for specie in species_names ]
+    # temp = [config.gas.egr.X[species_names.index('H2O')] if (specie == 'H2O') else temp[species_names.index(specie)] for specie in species_names ]
+    # temp = [1-temp[species_names.index('N2')]-temp[species_names.index('CO2')-temp[species_names.index('H2O')]] if (specie == 'CH4') else temp[species_names.index(specie)] for specie in species_names ]
+    # temp = [1-temp[species_names.index('N2')]-temp[species_names.index('CO2')-temp[species_names.index('H2O')]] if (specie == 'O2') else temp[species_names.index(specie)] for specie in species_names ]
+
+    # config.gas.egr.X = temp
+
+
+    print(config.gas.egr.X)
+
+    logprint("-----------------------------------------")
+    T,P,X = mixer(config,phi,egr,fb,real_egr=True,T_reinj=T_reinj)
+    f.inlet.X = X
+    f.inlet.T = T
+
+    return f

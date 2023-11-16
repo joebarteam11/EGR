@@ -167,6 +167,9 @@ def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',e
     Sx=sx[0]
     Sy=sx[0]*mw_ox/mw_fuel
 
+    logprint('Molar stoechiometric ratio Sx: ',Sx)
+    logprint('Mass  stoechiometric ratio Sy: ',Sy)
+
     if(blend_ratio is not None and blend_ratio != 0):
         if(config.fuelblend_unit=='mole'):
             Sx=(1-blend_ratio)*sx[0]+(blend_ratio)*sx[1]
@@ -366,34 +369,7 @@ def mixer(config,phi,egr,fb,real_egr=False,T_reinj=None):
 
     return mix.T, mix.P, mix.X
 
-def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
-    config.gas.egr.X = f.X[:,-1]
-    logprint("-----------------------------------------")
-    logprint('EGR composition BEFORE drying operation',)
-    species_names = config.gas.egr.species_names
-    for i,specie in enumerate(species_names):
-            logprint(f"{specie}: {config.gas.egr.X[i]:.6e} X[mol]")
 
-
-    if(dry):
-        # index = f.gas.species_index('H2O')
-        # dry_egr = config.gas.egr.X
-        # dry_egr[index] = 0.0
-        # coef = 1/sum(dry_egr)
-        # dry_egr = [coef*i for i in dry_egr]
-        dry_egr = dryer(config,f,T_reinj)
-        config.gas.egr.X = dry_egr
-
-        logprint('EGR composition AFTER drying operation',)
-        for i,specie in enumerate(species_names):
-                logprint(f"{specie}: {config.gas.egr.X[i]:.6e} X[mol]")
-
-    logprint("-----------------------------------------")
-    T,P,X = mixer(config,phi,egr,fb,real_egr=True,T_reinj=T_reinj)
-    f.inlet.X = X
-    f.inlet.T = T
-
-    return f
 
 def generate_unique_filename(config,flame):
     # Convert parameters to strings for inclusion in the identifier
