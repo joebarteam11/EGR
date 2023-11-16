@@ -8,14 +8,14 @@ units(length = "cm", time = "s", quantity = "mol", act_energy = "cal/mol")
 
 ideal_gas(name = "CH4_BFER",
       elements = " O  H  C N ",
-      species = """ O2 H2O CH4 CO CO2 N2 """,
+      species = """ O2 H2O CH4 CO CO2 FCO2 N2 """,
       reactions = "all",
       initial_state = state(temperature = 300.0,
                         pressure = OneAtm)    )
 
 ideal_gas(name = "CH4_BFER_mix",
       elements = " O  H  C N ",
-      species = """ O2  H2O CH4 CO CO2 N2 """,
+      species = """ O2  H2O CH4 CO CO2 FCO2 N2 """,
       reactions = "all",
       transport = "Mix",
       initial_state = state(temperature = 300.0,
@@ -24,7 +24,7 @@ ideal_gas(name = "CH4_BFER_mix",
 
 ideal_gas(name = "CH4_BFER_multi",
       elements = " O  H  C  N",
-      species = """ O2  H2O CH4 CO CO2 N2 """,
+      species = """ O2  H2O CH4 CO CO2 FCO2 N2 """,
       reactions = "all",
       transport = "Multi",
       initial_state = state(temperature = 300.0,
@@ -33,7 +33,7 @@ ideal_gas(name = "CH4_BFER_multi",
 
 ideal_gas(name = "CH4_BFER_avbp7",
       elements = " O  H  C  N Ar",
-      species = """ CH4 CO2 CO O2 H2O N2 """,
+      species = """ CH4 CO2 FCO2 CO O2 H2O N2 """,
       reactions = "all",
       transport = "AVBP",
       initial_state = state(temperature = 300.0,
@@ -312,6 +312,25 @@ species(name = "CO",
        )
 
 species(name = "CO2",
+    atoms = " C:1  O:2 ",
+    thermo = (
+       NASA( [  200.00,  1000.00], [  2.356773520E+00,   8.984596770E-03,
+               -7.123562690E-06,   2.459190220E-09,  -1.436995480E-13,
+               -4.837196970E+04,   9.901052220E+00] ),
+       NASA( [ 1000.00,  3500.00], [  3.857460290E+00,   4.414370260E-03,
+               -2.214814040E-06,   5.234901880E-10,  -4.720841640E-14,
+               -4.875916600E+04,   2.271638060E+00] )
+             ),
+    transport = gas_transport(
+                     geom = "linear",
+                     diam =     3.76,
+                     well_depth =   244.00,
+                     polar =     2.65,
+                     rot_relax =     2.10),
+    note = "L 7/88"
+       )
+
+species(name = "FCO2",
     atoms = " C:1  O:2 ",
     thermo = (
        NASA( [  200.00,  1000.00], [  2.356773520E+00,   8.984596770E-03,

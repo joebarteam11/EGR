@@ -28,7 +28,7 @@ module mod_customkinetics
   logical, parameter :: semiImplicit = .False.
   
   ! Number of non-qss and qss species and reactions
-  integer, parameter :: nspec = 15
+  integer, parameter :: nspec = 18
   integer, parameter :: nqss = 9
   integer, parameter :: nreac = 138
   integer, parameter :: nreac_reverse = 118
@@ -412,7 +412,10 @@ module mod_customkinetics
        0.03002628_pr, & ! CH2O
        0.03006964_pr, & ! C2H6
        0.02603788_pr, & ! C2H2
-       0.01402688_pr & ! CH2GL1G
+       0.01402688_pr, & ! CH2GL1G
+       0.0440098_pr, & ! FCO2
+       0.02801348_pr, & ! FN2
+       0.01801528_pr & ! FH2O
       !0.03300674_pr, & ! HO2
       !0.03204216_pr, & ! CH3OH
       !0.03103422_pr, & ! CH3O

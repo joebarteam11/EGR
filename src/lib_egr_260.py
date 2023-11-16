@@ -156,7 +156,7 @@ def stoechiometric_ratios(config):
         
     return sx,n_mole_ox,mw_ox
 
-def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',egr_def='%egr/%fuel'): 
+def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',egr_def='%egr/all'): 
     mw_fuel = config.gas.fuels.mean_molecular_weight/1000 #kg/mol
     mw_oxidizer = config.gas.ox.mean_molecular_weight/1000 #kg/mol
     mw_egr = config.gas.egr.mean_molecular_weight/1000 #kg/mol
@@ -166,6 +166,9 @@ def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',e
 
     Sx=sx[0]
     Sy=sx[0]*mw_ox/mw_fuel
+
+    logprint('Molar stoechiometric ratio Sx: ',Sx)
+    logprint('Mass  stoechiometric ratio Sy: ',Sy)
 
     if(blend_ratio is not None and blend_ratio != 0):
         if(config.fuelblend_unit=='mole'):
@@ -349,8 +352,12 @@ def mixer(config,phi,egr,fb,real_egr=False,T_reinj=None):
         dilutent = ct.Quantity(config.gas.egr,constant='HP')
         if(T_reinj is not None):
             dilutent.TP = T_reinj,config.gas.egr.P
+            dilutent.equilibrate('HP')
+            logprint("Check dilutent equilibrate temperature: ",dilutent.T)
         else:
             dilutent.TP = config.gas.egr.T,config.gas.egr.P
+            dilutent.equilibrate('HP')
+            logprint("Check dilutent equilibrate temperature: ",dilutent.T)
     else:
         dilutent = ct.Quantity(gas,constant='HP')
         dilutent.TPX = config.gas.egr.T,config.gas.egr.P,config.compo.egr
@@ -362,33 +369,7 @@ def mixer(config,phi,egr,fb,real_egr=False,T_reinj=None):
 
     return mix.T, mix.P, mix.X
 
-def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
-    config.gas.egr.X = f.X[:,-1]
-    logprint("-----------------------------------------")
-    logprint('EGR composition BEFORE drying operation',)
-    species_names = config.gas.egr.species_names
-    for i,specie in enumerate(species_names):
-            logprint(f"{specie}: {config.gas.egr.X[i]:.6e} X[mol]")
 
-
-    if(dry):
-        index = f.gas.species_index('H2O')
-        dry_egr = config.gas.egr.X
-        dry_egr[index] = 0.0
-        coef = 1/sum(dry_egr)
-        dry_egr = [coef*i for i in dry_egr]
-        config.gas.egr.X = dry_egr
-        
-        logprint('EGR composition AFTER drying operation',)
-        for i,specie in enumerate(species_names):
-                logprint(f"{specie}: {config.gas.egr.X[i]:.6e} X[mol]")
-
-    logprint("-----------------------------------------")
-    T,P,X = mixer(config,phi,egr,fb,real_egr=True,T_reinj=T_reinj)
-    f.inlet.X = X
-    f.inlet.T = T
-
-    return f
 
 def generate_unique_filename(config,flame):
     # Convert parameters to strings for inclusion in the identifier
@@ -405,3 +386,33 @@ def generate_unique_filename(config,flame):
     uid = hash_object.hexdigest()
 
     return parameter_str,uid
+
+def dryer(config,f,T_reinj):
+    idx_h2o = f.gas.species_index('H2O')
+    h2o_prop = ct.Solution(config.scheme, transport_model=config.transport)
+    if(T_reinj is not None):
+        h2o_prop.TPX = T_reinj, f.gas.P, 'H2O:1.0'
+
+    psat = Psat(T_reinj)
+
+    if(psat > f.P):
+        X_h2o_remaining = f.gas.X[idx_h2o]
+    else:
+        X_h2o_remaining = (psat / f.P)
+
+    X_todry = config.gas.egr.X
+    X_h2o_bg = X_todry[idx_h2o]
+
+    X_dry = [X * (1 - X_h2o_remaining)/(1-X_h2o_bg) for X in X_todry]
+    #correction for H2O (which does have to be scaled)
+    X_dry[idx_h2o] = X_h2o_remaining
+
+    #print('dried EGR: ',X_dry[idx_h2o])
+    return X_dry
+
+def Psat(T):
+    A = 3.55959
+    B = 643.748
+    C = -198.043
+    Psat = 10**(A-B/(T+C))
+    return Psat*1E5 
