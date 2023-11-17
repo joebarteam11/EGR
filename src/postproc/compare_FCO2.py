@@ -20,8 +20,8 @@ files=[
     #'/1DCO2_Poli5bar_M12.csv',
     #'/1DCO2_AP1bar_M12.csv',
     '/1DCO2_AP.csv',
-    '/1DFCO2_AP.csv',
     '/1DCO2_8AP.csv',
+    '/1DFCO2_AP.csv',
     '/1DFCO2_8AP.csv',
     #'/1DREAL_EGR_AP1bar2_M12.csv',
     #'/1DCO2_AP5bar_M12.csv',
@@ -66,7 +66,7 @@ mech=[#'Polimi',
       '1bar',
       '5bar',
       ]
-symbols = ['o-','x--','o-','x--']
+symbols = ['o-','o-','x--','x--']
 markers = ['o','x','s']
 
 def update_prop(handle, orig):
@@ -149,7 +149,7 @@ for i,var in enumerate(var_to_plot):
             label='CO2', 
             c='black',
             )
-    ax2.plot([],[],symbols[1],
+    ax2.plot([],[],symbols[2],
         label='FCO2', 
         c='black',
         )
