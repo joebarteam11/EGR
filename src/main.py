@@ -5,6 +5,7 @@ from mpi_func import *
 
 if __name__ == '__main__':
 
+    # MPI STUFF BELOW
     try: 
         from mpi4py import MPI
         # mpiprint("mpi4py properly installed, // available ",priority="info")
@@ -25,6 +26,7 @@ if __name__ == '__main__':
         ncpu=1
         myrank=0
         rank_0=True
+    # MPI STUFF ABOVE
 
     ct.suppress_thermo_warnings() 
 
@@ -36,16 +38,16 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
 
-        templistOx = [393] #[i for i in np.arange(290,305,10.0)]
-        templistFuel = [393] #[i for i in np.arange(290,305,10.0)]
+        templistOx = [300] #[i for i in np.arange(290,305,10.0)]
+        templistFuel = [300] #[i for i in np.arange(290,305,10.0)]
         templistEGR = templistOx
-        presslist= [1.01325E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange =  [i for i in np.arange(0.605,1.206,0.1)] # [0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
+        presslist= [1.0E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
+        phirange = [0.85] #[i for i in np.arange(0.605,1.206,0.1)] # [0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
         
         # fuelblendrange = [0.0] if no fuel blend needed
         fuelblendrange = [0.0]#[i for i in np.arange(0.0,0.301,0.100)] # 
         # egrrange = [0.0] if no dilution needed
-        egrrange = [0.2]#[i for i in np.arange(0.0,0.301,0.1)] 
+        egrrange = [0.35]#[i for i in np.arange(0.0,0.301,0.1)] 
 
         config = case(['CH4:1.0','H2:1.0'],       #fuel compo   e.g. ['CH4:1.0','H2:1.0'] with fuel blend = [0.0] is equivalent to pure CH4 as fuel, with fuel blend = [0.1] is equivalent to 90% CH4 and 10% H2
                     templistFuel,                 #tin fuel
@@ -83,8 +85,8 @@ if __name__ == '__main__':
     species_bg_output = ['CH4','O2','CO','CO2','H2O','N2']
 
     # tolerences for 1D flame solver
-    tol_ss = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
-    tol_ts = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for time stepping
+    tol_ss = [2.0e-11, 1.0e-11]  # tolerance [rtol atol] for steady-state problem
+    tol_ts = [2.0e-11, 1.0e-11]  # tolerance [rtol atol] for time stepping
 
     real_egr = False
     dry=True
@@ -94,8 +96,9 @@ if __name__ == '__main__':
     if (real_egr):
         save_file_name = path + "/results/" + dim + "M12_N2CO2H2OH2ReacOnly" + ".csv"
     else:
-        save_file_name = path + "/results/" + dim + "CO2_AP" + ".csv"
+        save_file_name = path + "/results/" + dim + "TEST" + ".csv"
 
+    # MPI STUFF BELOW
     if ncpu==1:
         if MPI_LOADED:
             PRINT_MONO_CPU_WARNING()
@@ -111,6 +114,11 @@ if __name__ == '__main__':
 
     if MPI_LOADED:
         comm.Barrier()
+    # MPI STUFF ABOVE
+
+    # if(build_table):
+    #     table_generation(config,df,path) <--df is the dataframe containing the results
+
     # get the execution time
     if rank_0:
         et = time.time()

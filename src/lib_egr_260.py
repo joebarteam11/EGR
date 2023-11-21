@@ -156,7 +156,7 @@ def stoechiometric_ratios(config):
         
     return sx,n_mole_ox,mw_ox
 
-def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',egr_def='%egr/all'): 
+def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',egr_def='%egr/%fuel'): 
     mw_fuel = config.gas.fuels.mean_molecular_weight/1000 #kg/mol
     mw_oxidizer = config.gas.ox.mean_molecular_weight/1000 #kg/mol
     mw_egr = config.gas.egr.mean_molecular_weight/1000 #kg/mol
@@ -189,6 +189,8 @@ def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',e
             egr_comparison=air_mass+fuel_mass
         elif(egr_def=='custom'):
             egr_comparison=None
+        else:
+            raise ValueError('egr_def must be %egr/%ox, %egr/%fuel or %egr/all')
 
         egr_mass=(egr_rate/(1-egr_rate))*(egr_comparison) #+fuel_mass depending on the definition you want
         mdots=[fuel_mass*coef, air_mass*coef, egr_mass*coef]

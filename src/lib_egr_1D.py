@@ -1,4 +1,6 @@
 from lib_egr_260 import *
+import h5py
+from write_table import write_table_hdf
 
 def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_reinj=None,restore_success=False):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...   
@@ -301,7 +303,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
             break
     return f,T_flamme
 
-def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=[2.0e-5, 1.0e-9],tol_ts=[2.0e-5, 1.0e-9],dry=True,T_reinj=None,species = ['CH4','O2','CO2','H2O'],vars=['EGR','FB','phi','AF','P','Tin','T','u','dF','rhoGF','rhoGB']):
+def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=[2.0e-5, 1.0e-9],tol_ts=[2.0e-5, 1.0e-9],dry=True,T_reinj=None,species = ['CH4','O2','CO2','H2O'],vars=['EGR','FB','phi','AF','P','Tin','T','u','dF','hr','rhoGF','rhoGB','omega0']):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...
     path = os.getcwd()+'/src'
 
@@ -367,7 +369,11 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=
     
     logprint('SL0 :',SL0)
 
-    omega0=compute_omega0(f)
+    # max of omega0
+    omega0=compute_omega0_max(f)
+    #max of heat release rate
+    hr_max = np.max(f.heat_release_rate)
+
     #f.write_AVBP(path+'/'+'CH4_phi073'+'.csv')
     #print("Mean molecular weight: ",f.gas.mean_molecular_weight)
 
@@ -387,10 +393,17 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=
 
     vartosave = vars+i_species_names+species
     df =  pd.DataFrame(columns=vartosave)
+
+    #ambiguous definition with fuel blends
+    max_omega0_fuel = np.max([omega0[f.gas.species_index(specie.split(':')[0])] for specie in config.compo.fuels])
     
     index = [f.gas.species_index(specie) for specie in species]
-    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, T_flamme,SL0,flamme_thickness(f),f.density[0],f.density[-1],]+i_species_massfractions+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, T_flamme,SL0,flamme_thickness(f),hr_max,f.density[0],f.density[-1],max_omega0_fuel,]+i_species_massfractions+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+    # duplicate 10 times the first line
+    #df = pd.concat([df]*5, ignore_index=True)
+    #print(df)
 
+    #table_generation(config,df,path)
     return df
 
 def fresh_gas(phi,config,egr_rate,Tmix,Pmix):
@@ -430,7 +443,7 @@ def flamme_thickness(f):
     #print('Thickness (m)',thickness)
     return thickness
 
-def compute_omega0(f):
+def compute_omega0_max(f):
     if(version.parse(ct.__version__) == version.parse("2.3.0")):
         species_names = f.gas.species_names
         net_prod_rate = f.net_production_rates
@@ -526,3 +539,62 @@ def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
     f.inlet.T = T
 
     return f
+
+def table_generation(config,df,output_folder):
+    
+    data_names = {
+
+        'u':'SL_0',
+        'Tin':'TEMPERATURE',
+        'T':'TEMPERATURE_BURNT',
+        'P':'PRESSURE',
+        'phi':'EQUIVALENCE_RATIO',
+        'hr':'VOLUMETRIC_HEAT_RELEASE_MAX',
+        'omega0':'W_FUEL_MAX',
+        # 'omegaSpec':'W_YC_MAX',
+        'dF':'DELTA_L_0',
+    }
+    # convert df columns names to data_names and only keep the columns that are in data_names
+    tempdf = df.rename(columns=data_names)[data_names.values()]
+    # remove ['EQUIVALENCE_RATIO','TEMPERATURE','PRESSURE',] from tempdf
+    # tempdf = tempdf.drop(columns=['EQUIVALENCE_RATIO','TEMPERATURE','PRESSURE',])
+    logprint(tempdf)
+
+    #create a table object and fill it with the data
+    table = Table(config,tempdf,output_folder)
+    # print(table.data[table.variable_names[0]])
+    # print(table.data['SL_0'])
+    #write the table to hdf5 file
+    write_table_hdf(table)
+    logprint('Table written to hdf format in provided output folder',sys.stdout)
+    
+#A class to store the data to be written in the hdf5 file
+class Table:
+    def __init__(self, config, dfdata, output_folder, phivitiated=False, tool='TFLES'):
+        self.output_folder = output_folder
+        self.variable_names = list(dfdata.columns.values)
+        self.list_sorted_phi = sorted(set(dfdata['EQUIVALENCE_RATIO']))
+        self.iPhi = [self.list_sorted_phi.index(phi) for phi in dfdata['EQUIVALENCE_RATIO']]
+        self.list_sorted_temperature = sorted(set(dfdata['TEMPERATURE']))
+        self.iTemperature = [self.list_sorted_temperature.index(T) for T in dfdata['TEMPERATURE']]
+        self.list_sorted_pressure = sorted(set(dfdata['PRESSURE']))
+        self.iPressure = [self.list_sorted_pressure.index(P) for P in dfdata['PRESSURE']]
+        #remove equiv ratio, temp and pressure from data from self.variable_names
+        self.variable_names = [var for var in self.variable_names if var not in ['EQUIVALENCE_RATIO','TEMPERATURE','PRESSURE']]  
+        print(self.variable_names)     
+        #data = data.drop(columns=['EQUIVALENCE_RATIO','TEMPERATURE','PRESSURE',])
+        #define self.data is multiindex
+
+        #convert dfdata to a 3D array of shape (len(self.list_sorted_phi),len(self.list_sorted_temperature),len(self.list_sorted_pressure)) and fill it with the data
+        #conserve only the columns that are in self.variable_names and put all these arrays in self.data
+        self.data = {var:np.zeros((len(self.list_sorted_phi),len(self.list_sorted_temperature),len(self.list_sorted_pressure))) for var in self.variable_names}
+
+        for var in self.variable_names:
+            for i,phi in enumerate(self.list_sorted_phi):
+                for j,T in enumerate(self.list_sorted_temperature):
+                    for k,P in enumerate(self.list_sorted_pressure):
+                        self.data[var][i,j,k] = dfdata[(dfdata['EQUIVALENCE_RATIO']==phi) & (dfdata['TEMPERATURE']==T) & (dfdata['PRESSURE']==P)][var].values[0]
+        
+        self.mechanism = config.scheme.split('/')[-1].split('.')[0]
+        self.phivitiated = phivitiated
+        self.tool = tool
