@@ -319,8 +319,12 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_na
     except:
         mpiprint("No progress bar")
         pass
-    mpiprint(output, file=sys.stdout)
+    mpiprint(results[:], file=sys.stdout)
     mpiprint(items_and_status.to_string())
+
+    return output
+
+
  
 def MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species,tol_ss,tol_ts):
     proc0=int(0)
@@ -342,10 +346,12 @@ def MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species,tol
 def MPI_CALCULATION(rank_0,items,tol_ss,tol_ts,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species):
     if rank_0:
         mpiprint('Number of cases: '+str(len(items)),file=sys.stdout)
-        MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name)
+        output = MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_name)
+        return output
     else:
         MPI_CALCULATION_SLAVE(comm,dim,restart_rate,real_egr,dry,T_reinj,species,tol_ss,tol_ts)
 
+    
 
 def MONO_CPU_CALCULATION(items,tol_ss,tol_ts,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species):
     mpiprint('Number of cases: '+str(len(items)),file=sys.stdout)
@@ -362,6 +368,8 @@ def MONO_CPU_CALCULATION(items,tol_ss,tol_ts,save_file_name,dim,restart_rate,rea
     output=pd.concat(results[:],axis=0) 
     output.to_csv(save_file_name,index=False) 
     mpiprint(output)
+
+    return output
 
 def PRINT_MONO_CPU_WARNING():
     for i in range(10):

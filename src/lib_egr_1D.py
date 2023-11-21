@@ -554,11 +554,18 @@ def table_generation(config,df,output_folder):
         # 'omegaSpec':'W_YC_MAX',
         'dF':'DELTA_L_0',
     }
+    print("-THIS IS DF -"*400)
+    print(df)
+    print("--"*400)
+    sys.stdout.flush()
     # convert df columns names to data_names and only keep the columns that are in data_names
     tempdf = df.rename(columns=data_names)[data_names.values()]
     # remove ['EQUIVALENCE_RATIO','TEMPERATURE','PRESSURE',] from tempdf
     # tempdf = tempdf.drop(columns=['EQUIVALENCE_RATIO','TEMPERATURE','PRESSURE',])
-    logprint(tempdf)
+    print("-THIS IS tempdf -"*400)
+    print(tempdf)
+    print("--"*400)
+    sys.stdout.flush()
 
     #create a table object and fill it with the data
     table = Table(config,tempdf,output_folder)
@@ -566,7 +573,7 @@ def table_generation(config,df,output_folder):
     # print(table.data['SL_0'])
     #write the table to hdf5 file
     write_table_hdf(table)
-    logprint('Table written to hdf format in provided output folder',sys.stdout)
+    # logprint('Table written to hdf format in provided output folder',sys.stdout)
     
 #A class to store the data to be written in the hdf5 file
 class Table:
@@ -581,7 +588,18 @@ class Table:
         self.iPressure = [self.list_sorted_pressure.index(P) for P in dfdata['PRESSURE']]
         #remove equiv ratio, temp and pressure from data from self.variable_names
         self.variable_names = [var for var in self.variable_names if var not in ['EQUIVALENCE_RATIO','TEMPERATURE','PRESSURE']]  
-        print(self.variable_names)     
+        
+        print("-THIS IS lsitsorted -"*400)
+        print(self.list_sorted_phi)
+        print(self.list_sorted_temperature)
+        print(self.list_sorted_pressure)
+        print("--"*400)
+
+
+        print("-THIS IS dfdata -"*400)
+        print(dfdata)     
+        print("--"*400)
+        sys.stdout.flush()
         #data = data.drop(columns=['EQUIVALENCE_RATIO','TEMPERATURE','PRESSURE',])
         #define self.data is multiindex
 
@@ -593,6 +611,10 @@ class Table:
             for i,phi in enumerate(self.list_sorted_phi):
                 for j,T in enumerate(self.list_sorted_temperature):
                     for k,P in enumerate(self.list_sorted_pressure):
+                        print("-THIS IS seld.data -"*400)
+                        print(self.data)
+                        print("--"*400)
+                        sys.stdout.flush()
                         self.data[var][i,j,k] = dfdata[(dfdata['EQUIVALENCE_RATIO']==phi) & (dfdata['TEMPERATURE']==T) & (dfdata['PRESSURE']==P)][var].values[0]
         
         self.mechanism = config.scheme.split('/')[-1].split('.')[0]

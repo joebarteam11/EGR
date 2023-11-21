@@ -1,5 +1,6 @@
 import time
 from mpi_func import *
+from lib_egr_1D import table_generation
 
 
 
@@ -42,7 +43,7 @@ if __name__ == '__main__':
         templistFuel = [300] #[i for i in np.arange(290,305,10.0)]
         templistEGR = templistOx
         presslist= [1.0E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [0.85] #[i for i in np.arange(0.605,1.206,0.1)] # [0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
+        phirange = [i for i in np.arange(0.805,1.206,0.1)] # [0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
         
         # fuelblendrange = [0.0] if no fuel blend needed
         fuelblendrange = [0.0]#[i for i in np.arange(0.0,0.301,0.100)] # 
@@ -108,16 +109,20 @@ if __name__ == '__main__':
             mpiprint('\n WARNING, mpi4py is not installed in your env. Please do not use mpirun -n ...',file=sys.stdout)
                 
 
-        MONO_CPU_CALCULATION(items,tol_ss,tol_ts,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
+        output = MONO_CPU_CALCULATION(items,tol_ss,tol_ts,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
     else:
-        MPI_CALCULATION(rank_0,items,tol_ss,tol_ts,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
+        output = MPI_CALCULATION(rank_0,items,tol_ss,tol_ts,comm,ncpu,optimise_mpi_flame_order,save_file_name,dim,restart_rate,real_egr,dry,T_reinj,species_bg_output)
 
     if MPI_LOADED:
         comm.Barrier()
     # MPI STUFF ABOVE
 
-    # if(build_table):
-    #     table_generation(config,df,path) <--df is the dataframe containing the results
+    if rank_0:
+        df = output.round({'P':1,'Tin':1,'phi':2})
+
+        build_table = True 
+        if(build_table):
+            table_generation(config,df,path) # <--df is the dataframe containing the results
 
     # get the execution time
     if rank_0:
