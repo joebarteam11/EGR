@@ -54,7 +54,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
                     if(verbose>0):
                         logprint('EGR applied to inlet')
                     
-                #f.save(flamefile)
+                f.save(hash, loglevel=loglevel, description=flamename + "\n Cantera version "+ct.__version__+' with '+config.transport+' transport model and mechanism '+config.scheme )
             except FlameExtinguished:
                 logprint('Flame '+flamename +': ')
                 logprint('Flame extinguished')
@@ -224,7 +224,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
                         f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
                         if(verbose>0):
                             logprint('EGR applied to inlet')
-                    #f.save(flamefile)
+                    f.save(hash, loglevel=loglevel, description=flamename + "\n Cantera version "+ct.__version__+' with '+config.transport+' transport model and mechanism '+config.scheme )
                 except FlameExtinguished:
                     logprint('Flame '+flamename +': ')
                     logprint('Flame extinguished')
@@ -234,7 +234,9 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
                     logprint(('Error occurred while solving: (ite 6)', e))
             #end if not auto_success
             else:
-                logprint('Successful restore, skipping iterations 1 to 6')
+                logprint('Successful auto refinement, skipping iterations 1 to 6')
+        else:
+            logprint('Successful restore, skipping iterations 1 to 6')
         #end if not restore_success
 
         # Seventh iteration
@@ -252,7 +254,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         try:
             if(verbose>1):
                 logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid, auto=auto)
+            f.solve(loglevel, refine_grid='disabled', auto=auto)
             T_flamme = f.T[-1]
             if(real_egr):
                 XCO2_2 = f.X[index,-1]
@@ -264,11 +266,11 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
             #f.save(flamefile)
             try:
                 # if hash is an existing file 
-                if os.path.isfile(hash):
-                    logprint('Flame file '+hash+' is already existant, will not overwrite')
-                else:
-                    logprint('Saving flame to file '+hash)
-                    f.save(hash, loglevel=loglevel, description=flamename + "\n Cantera version "+ct.__version__+' with '+config.transport+' transport model and mechanism '+config.scheme )
+                # if os.path.isfile(hash):
+                #     logprint('Flame file '+hash+' is already existant, will not overwrite')
+                # else:
+                logprint('Saving flame to file '+hash)
+                f.save(hash, loglevel=loglevel, description=flamename + "\n Cantera version "+ct.__version__+' with '+config.transport+' transport model and mechanism '+config.scheme )
             except:
                 logprint('Cannot save flame to file '+flamename)
 
