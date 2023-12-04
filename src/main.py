@@ -1,7 +1,7 @@
 import time
 from mpi_func import *
 from lib_egr_1D import table_generation
-
+from datetime import datetime
 
 
 if __name__ == '__main__':
@@ -9,6 +9,7 @@ if __name__ == '__main__':
     # MPI STUFF BELOW
     try: 
         from mpi4py import MPI
+
         # mpiprint("mpi4py properly installed, // available ",priority="info")
         MPI_LOADED=True
     except:
@@ -38,7 +39,9 @@ if __name__ == '__main__':
         mpiprint(f"Running on {ncpu} cores",file=sys.stdout)
         # get the start time
         st = time.time()
-
+        now = datetime.now()
+        formatted_date = now.strftime("%d-%m-%y-%H:%M:%S")
+        print("Results saved on: ", formatted_date)
         templistOx = [i for i in np.arange(450,660,50.0)]
         templistFuel = templistOx #[i for i in np.arange(290,305,10.0)]
         templistEGR = templistOx
@@ -49,8 +52,9 @@ if __name__ == '__main__':
         fuelblendrange = [0,0.1,0.2,0.3,0.4] #[i for i in np.arange(0.0,0.301,0.100)] # 
         # egrrange = [0.0] if no dilution needed
         egrrange = [0]#[i for i in np.arange(0.0,0.301,0.1)]
+        fuels = ['CH4:1.0','H2:1.0']
 
-        config = case(['CH4:1.0','H2:1.0'],       #fuel compo   e.g. ['CH4:1.0','H2:1.0'] with fuel blend = [0.0] is equivalent to pure CH4 as fuel, with fuel blend = [0.1] is equivalent to 90% CH4 and 10% H2
+        config = case(fuels,       #fuel compo   e.g. ['CH4:1.0','H2:1.0'] with fuel blend = [0.0] is equivalent to pure CH4 as fuel, with fuel blend = [0.1] is equivalent to 90% CH4 and 10% H2
                     templistFuel,                 #tin fuel
                     presslist,                    #pin fuel
                     'O2:1.0 N2:3.76',             #ox compo
@@ -68,6 +72,8 @@ if __name__ == '__main__':
                     #'gri30.cti',
                     'Mix', #transport model
                     'no',  #is an ARC chemistry ? 'ARC' = yes, other = no
+                    saveCSV=True, # Save csv result ? 
+                    saveCSVpath=path+'/results/'+formatted_date, #path to save csv
                     )
         
 
@@ -77,6 +83,25 @@ if __name__ == '__main__':
         items = [[config,phi,Tin,Pin,EGR,FB] for phi in config.phi_range for EGR in config.egr_range for FB in config.fuelblend_range for Tin in Tins for Pin in Pins ]
         
         init_cases(config)
+
+
+        # Specify the file path
+        config_file_path = config.saveCSVpath+"/aREADME.txt"
+
+        if not os.path.exists(config.saveCSVpath):
+            os.makedirs(config.saveCSVpath)
+
+        # Open the file in append mode
+        # Save config information in a text file
+        config_info = f"Current folder: {path}\nRunning Cantera version: {ct.__version__}\nRunning on {ncpu} cores\nResults saved on: {formatted_date}\n"
+        config_info += f"templistOx: {templistOx}\ntemplistFuel: {templistFuel}\ntemplistEGR: {templistEGR}\npresslist: {presslist}\nphirange: {phirange}\n"
+        config_info += f"fuelblendrange: {fuelblendrange}\negrrange: {egrrange}\nconfig_file_path: {config_file_path}\n"
+        config_info += f"fuels: {fuels}\n"
+
+        with open(config_file_path, "w") as file:
+            file.write(config_info)
+
+
     else:
         items=[]
 

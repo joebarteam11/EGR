@@ -1,6 +1,7 @@
 from lib_egr_260 import *
 import h5py
 from write_table import write_table_hdf
+import os
 
 
 
@@ -16,6 +17,17 @@ def flame_saver(f,loglevel,flamename,hash,config):
     except:
         logprint('Cannot save flame to file '+flamename)
 
+def flame_saver_csv(f,config,phi,egr,fb):
+    if config.saveCSV:
+        if not os.path.isdir(config.saveCSVpath):
+            os.makedirs(config.saveCSVpath)
+        flamename = config.saveCSVpath+'/T'+str(config.gas.fuels.T)+'_P'+str(config.gas.fuels.P)+'_phi'+str(phi)+'_egr'+str(egr)+'_fb'+str(fb)
+        f.write_csv(flamename+'.csv',quiet=False)
+        logprint('Flame csv saved : '+flamename)
+
+
+
+        
 def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_reinj=None,restore_success=False):
     warnings.simplefilter("ignore", UserWarning) #aramco speeks a lot...   
     
@@ -82,6 +94,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         
         if sucess:
             flame_saver(f,loglevel,flamename,hash,config)
+            flame_saver_csv(f,config,phi,egr,fb)
         else:
             pass
 
