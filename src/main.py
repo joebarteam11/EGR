@@ -40,7 +40,7 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
         now = datetime.now()
-        formatted_date = now.strftime("%d-%m-%y-%H:%M:%S")
+        formatted_date = now.strftime("%d_%m_%y_%H-%M-%S")
         print("Results saved on: ", formatted_date)
         templistOx = [i for i in np.arange(450,660,50.0)]
         templistFuel = templistOx #[i for i in np.arange(290,305,10.0)]
