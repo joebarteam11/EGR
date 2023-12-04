@@ -51,46 +51,47 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     criteria_list += [[5.0, 0.4, 0.4,0.03, True]] # Third iteration criterias
     criteria_list += [[5.0, 0.1, 0.1,0.01, True]] # Fourth iteration criterias
     criteria_list += [[5.0, 0.05, 0.05,0.01, True]] # Fifth iteration criterias
-    criteria_list += [[5.0, 0.05, 0.05,0.01, True]] # Sixth iteration criterias
-    citeria_7th_ite = [5.0, 0.04, 0.04,0.008, True] # 7th iteration criterias
+    criteria_list += [[4.0, 0.05, 0.05,0.01, True]] # Sixth iteration criterias
+    last_iteration = [3.0, 0.04, 0.04,0.008, True] # 7th iteration criterias
 
 
     while(True or i<maxegrate_iter):
-        #print('While loop starts')
         # Calculation
         if(not restore_success):
             auto_success = False
             auto = True 
             # One loop of auto refinement
-            i = "auto iteration"
+            i = " auto iteration"
             f,auto_success,XCO2_1 = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i)
-            auto_success = False
+    
             if(not auto_success):
                 auto = False
                 boucle_over_flame_iterations(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,criteria_list)
             else:
-                logprint('Successful auto refinement, skipping iterations 1 to 6')
+                logprint('Successful auto refinement, going to last_iteration')
         else:
-            logprint('Successful restore, skipping iterations 1 to 6')
+            logprint('Successful restore, going to last_iteration')
         #end if not restore_success
 
-        # # 7th iteration
+        # # Last iteration
         f.energy_enabled = True
-        f.set_refine_criteria(ratio = citeria_7th_ite[0], slope = citeria_7th_ite[1], curve = citeria_7th_ite[2], prune = citeria_7th_ite[3])
+        f.set_refine_criteria(ratio = last_iteration[0], slope = last_iteration[1], curve = last_iteration[2], prune = last_iteration[3])
         T_flamme = f.T[-1]
-        i = "7"
+        i = " last iteration"
         f,sucess,XCO2_1 = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i)
+        
+        if sucess:
+            flame_saver(f,loglevel,flamename,hash,config)
+        else:
+            pass
+
 
         if(real_egr):
             last_residual = abs(residuals[-1]-residuals[-2])
-            #print('last residual',last_residual)
-            #print('Residuals',residuals)
         else:
             break
-        #print('last residual',last_residual)
         if(last_residual<1e-9):
             T_flamme = f.T[-1]
-            #print('BREAK HERE')
             break
         i+=1
         if(i>maxegrate_iter):
