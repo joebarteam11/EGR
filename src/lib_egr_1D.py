@@ -21,7 +21,8 @@ def flame_saver_csv(f,config,phi,egr,fb):
     if config.saveCSV:
         if not os.path.isdir(config.saveCSVpath):
             os.makedirs(config.saveCSVpath)
-        flamename = config.saveCSVpath+'/T'+str(config.gas.fuels.T)+'_P'+str(config.gas.fuels.P)+'_phi'+str(phi)+'_egr'+str(egr)+'_fb'+str(fb)
+        
+        flamename = config.saveCSVpath+'/T'+str(config.gas.fuels.T)+'K_P'+str(round(config.gas.fuels.P/1e5,2))+'bar_phi'+str(round(phi, 2))+'_egr'+str(egr)+'_fb'+str(fb)
         f.write_csv(flamename+'.csv',quiet=False)
         logprint('Flame csv saved : '+flamename)
 
