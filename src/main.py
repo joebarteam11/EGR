@@ -41,18 +41,18 @@ if __name__ == '__main__':
         st = time.time()
         now = datetime.now()
         formatted_date = now.strftime("%d_%m_%y_%H-%M-%S")
-        print("Results saved on: ", formatted_date)
-        templistOx = [i for i in np.arange(450,660,50.0)]
+        mpiprint("Results saved on: " + str(formatted_date), file=sys.stdout)
+        templistOx = [573] #[i for i in np.arange(450,660,50.0)]
         templistFuel = templistOx #[i for i in np.arange(290,305,10.0)]
         templistEGR = templistOx
-        presslist= [1.0E5,1.2e5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [i for i in np.arange(0.60,2.01,0.3)]#[0.85,0.1] #[0.7,0.75,0.8,0.85,0.9,1.0,1.1,1.2]#
+        presslist= [1.0E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
+        phirange = [i for i in np.arange(0.605,1.21,0.1)]#[0.85,0.1] #[0.7,0.75,0.8,0.85,0.9,1.0,1.1,1.2]#
         
-        # fuelblendrange = [0.0] if no fuel blend needed
-        fuelblendrange = [0,0.1,0.2,0.3,0.4] #[i for i in np.arange(0.0,0.301,0.100)] # 
+        fuelblendrange = [0.0] #if no fuel blend needed
+        # fuelblendrange = [0,0.1,0.2,0.3,0.4] #[i for i in np.arange(0.0,0.301,0.100)] # 
         # egrrange = [0.0] if no dilution needed
-        egrrange = [0]#[i for i in np.arange(0.0,0.301,0.1)]
-        fuels = ['CH4:1.0','H2:1.0']
+        egrrange = [0.0,0.1,0.2]#[i for i in np.arange(0.0,0.301,0.1)]
+        fuels = ['CH4:1.0','H2O:1.0']
 
         config = case(fuels,       #fuel compo   e.g. ['CH4:1.0','H2:1.0'] with fuel blend = [0.0] is equivalent to pure CH4 as fuel, with fuel blend = [0.1] is equivalent to 90% CH4 and 10% H2
                     templistFuel,                 #tin fuel
@@ -68,7 +68,8 @@ if __name__ == '__main__':
                     egrrange,                     #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                     'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
-                    path+'schemes/GRI-Mech3.0.cti',   # 'schemes/reducedS16R156QSS12_ANSALDO_HM.cti',  #fuel mechanism
+                    #path+'schemes/CH4_15_256_9_AP.cti',   # 'schemes/reducedS16R156QSS12_ANSALDO_HM.cti',  #fuel mechanism
+                    path+'schemes/BFER_methane.cti', 
                     #'gri30.cti',
                     'Mix', #transport model
                     'no',  #is an ARC chemistry ? 'ARC' = yes, other = no
@@ -114,13 +115,13 @@ if __name__ == '__main__':
     tol_ss = [2.0e-6, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
     tol_ts = [2.0e-6, 1.0e-9]  # tolerance [rtol atol] for time stepping
 
-    real_egr = False
+    real_egr = True
     dry=True
     T_reinj= 573
 
     restart_rate = None
     if (real_egr):
-        save_file_name = path + "/results/" + dim + "M12_N2CO2H2OH2ReacOnly" + ".csv"
+        save_file_name = path + "/results/" + dim + "BFER_1b_EGR" + ".csv"
     else:
         save_file_name = path + "/results/" + dim + "GRI-FOR-TEST-AFTER-CHANGE" + ".csv"
 

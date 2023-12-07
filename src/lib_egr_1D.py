@@ -36,11 +36,12 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     # Iterations start here
     #################################################################
     maxegrate_iter = 50
-    residuals = []
+    residuals = [2.0]
     index = f.gas.species_index('CO2')
     last_residual = 1.0 
+    XCO2_1 = 0.0
     i=0
-    verbose = 1
+    verbose = 0
     loglevel  = 0                      # amount of diagnostic output (0 to 5)	    
     refine_grid = 'refine' #True                  # True to enable refinement, False to disable 	
     f.max_time_step_count=75000
@@ -70,16 +71,18 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
 
     while(True or i<maxegrate_iter):
         # Calculation
-        if(not restore_success):
+        if(not restore_success or real_egr):
             auto_success = False
             auto = True 
             # One loop of auto refinement
-            i = " auto iteration"
-            f,auto_success,XCO2_1 = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i)
-    
-            if(not auto_success):
+            itype = " auto iteration"
+            if (not real_egr):
+                f,auto_success,_,_ = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,itype,XCO2_1)
+            #residuals.append(residual)
+            if(not auto_success or real_egr):
                 auto = False
-                boucle_over_flame_iterations(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,criteria_list)
+                f,sucess,XCO2_1,residu = boucle_over_flame_iterations(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,criteria_list)
+                residuals.extend(residu)
             else:
                 logprint('Successful auto refinement, going to last_iteration')
         else:
@@ -90,9 +93,10 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         f.energy_enabled = True
         f.set_refine_criteria(ratio = last_iteration[0], slope = last_iteration[1], curve = last_iteration[2], prune = last_iteration[3])
         T_flamme = f.T[-1]
-        i = " last iteration"
-        f,sucess,XCO2_1 = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i)
-        
+        itype = " last iteration"
+        f,sucess,XCO2_1,residual = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,itype,XCO2_1)
+        residuals.append(residual)
+
         if sucess:
             flame_saver(f,loglevel,flamename,hash,config)
             flame_saver_csv(f,config,phi,egr,fb)
@@ -104,7 +108,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
             last_residual = abs(residuals[-1]-residuals[-2])
         else:
             break
-        if(last_residual<1e-9):
+        if(last_residual<1e-6):
             T_flamme = f.T[-1]
             break
         i+=1
@@ -342,7 +346,7 @@ def apply_egr_to_inlet(f,config,phi,egr,fb,dry=False,T_reinj=None):
     # config.gas.egr.X = temp
 
 
-    print(config.gas.egr.X)
+    #print(config.gas.egr.X)
 
     logprint("-----------------------------------------")
     T,P,X = mixer(config,phi,egr,fb,real_egr=True,T_reinj=T_reinj)
@@ -433,51 +437,73 @@ class Table:
         self.tool = tool
 
 
-def flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i):
-    XCO2_1 = 0
+def flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i,XCO2_1):
+
     if(verbose>0):
         if (verbose>1):
             logprint('Iteration n'+str(i),file=sys.stdout)
         else:
-            logprint('Iteration n'+str(i),file=sys.stdout)
+            logprint('Iteration n'+str(i))
         
-        try:
-            if(verbose>1):
-                logprint('Inlet composition before f.solve',f.inlet.X,file=sys.stdout)
-            f.solve(loglevel, refine_grid, auto)
-            success = True
-            if (real_egr):
-                index = f.gas.species_index('CO2')
-                XCO2_1 = f.X[index,-1]
-                f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
-                if(verbose>0):
-                    logprint('EGR applied to inlet',file=sys.stdout)
-            
-        except FlameExtinguished:
-            logprint('Flame '+flamename +': ',file=sys.stdout)
-            logprint('Flame extinguished',file=sys.stdout)
-            success = False
+    try:
+        if(verbose>1):
+            logprint('Inlet composition before f.solve',f.inlet.X,file=sys.stdout)
+        f.solve(loglevel, refine_grid, auto)
+        success = True
+        # print('before egr')
+        if (real_egr and XCO2_1==0.0):
+            # print('init egr loop')
+            index = f.gas.species_index('CO2')
+            XCO2_1 = f.X[index,-1]
+            residual = 1.0
+            f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
+            if(verbose>0):
+                logprint('EGR applied to inlet',file=sys.stdout)
+        elif(real_egr):
+            # print('egr loop')
+            index = f.gas.species_index('CO2')
+            XCO2_2 = f.X[index,-1]
+            residual = np.abs(XCO2_1-XCO2_2)
+            #residuals.append(np.abs(XCO2_1-XCO2_2))
+            XCO2_1 = XCO2_2
+            f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
+            if(verbose>0):
+                logprint('EGR applied to inlet')
+        else:
+            XCO2_1 = 0.0
+            residual = 1.0
 
-        except ct.CanteraError as e:
-            logprint('Flame '+flamename +': ',file=sys.stdout)
-            logprint(('Error occurred while solving: (ite '+str(i)+') \n', e),file=sys.stdout)
-            success = False
+    except FlameExtinguished:
+        logprint('Flame '+flamename +': ',file=sys.stdout)
+        logprint('Flame extinguished',file=sys.stdout)
+        success = False
 
-        return f,success,XCO2_1
+    except ct.CanteraError as e:
+        logprint('Flame '+flamename +': ',file=sys.stdout)
+        logprint(('Error occurred while solving: (ite '+str(i)+') \n', e),file=sys.stdout)
+        success = False
+
+    # print('success',success)
+    # print('XCO2_1',XCO2_1)
+    # print('residual',residual)
+
+    return f,success,XCO2_1,residual
     
 def boucle_over_flame_iterations(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,list_of_criteria):
 
-
+    XCO2 = 0.0
+    residuals = []
     for i,criteria in enumerate(list_of_criteria):
         f.energy_enabled = criteria[4]
         f.set_refine_criteria(ratio = criteria[0], slope = criteria[1], curve = criteria[2], prune = criteria[3])
-        f,success,XCO2 = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i) 
+        f,success,XCO2,residual = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i,XCO2)
+        residuals.append(residual)
         if (success):
             pass
         else:
             break
 
-    return f,success,XCO2
+    return f,success,XCO2,residuals
 
 
 
