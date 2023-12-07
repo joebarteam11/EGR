@@ -298,7 +298,7 @@ def MPI_CALCULATION_MASTER(items,comm,ncpu,optimise_mpi_flame_order,save_file_na
         else :
             rank0_update_output_log(nb_of_started_flames,nb_of_finished_flames,itemtot) # log calculation status
 
-        if nb_of_finished_flames> 0 and  nb_of_finished_flames%10==0 : # Every 10 itération, saves a intermediate result file
+        if nb_of_finished_flames> 0 and  nb_of_finished_flames%1==0 : # Every 10 itération, saves a intermediate result file
             output=pd.concat(results[:],axis=0) 
             output.to_csv(save_file_name,index=False)
             mpiprint("Partial results has been saved")

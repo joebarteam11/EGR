@@ -156,7 +156,7 @@ def stoechiometric_ratios(config):
         
     return sx,n_mole_ox,mw_ox
 
-def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',egr_def='%egr/%fuel'): 
+def compute_mdots(config,phi,egr_rate,blend_ratio,coef=50.0,return_unit='mass',egr_def='%egr/all'): 
     mw_fuel = config.gas.fuels.mean_molecular_weight/1000 #kg/mol
     mw_oxidizer = config.gas.ox.mean_molecular_weight/1000 #kg/mol
     mw_egr = config.gas.egr.mean_molecular_weight/1000 #kg/mol

@@ -11,7 +11,7 @@ path = os.getcwd()
 #from lib_egr_260 import show_graphs
 print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
-Ncurves = 2
+Ncurves = 3
 files=[
     # '/1DNO_EGR_Aramco13.csv',
     # '/1DCO2_Aramco13.csv',
@@ -19,10 +19,23 @@ files=[
     #'/1DCO2_Poli1bar_M12.csv',
     #'/1DCO2_Poli5bar_M12.csv',
     #'/1DCO2_AP1bar_M12.csv',
-    '/1DCO2_AP.csv',
-    '/1DCO2_8AP.csv',
-    '/1DFCO2_AP.csv',
-    '/1DFCO2_8AP.csv',
+    '/1DCO2_1bar.csv',
+    # '/1DCO2_5bar.csv',
+    '/1DCO2_8bar.csv',
+    # '/1DCO2_12bar.csv',
+    # '/1DCO2_19bar.csv',
+    # '/1DCO2_25bar.csv',
+    '/1DCO2_30bar.csv',
+    # '/1DCO2_8AP.csv',
+    # '/1DFCO2_AP.csv',
+    # '/1DFCO2_8AP.csv',
+    '/1DFCO2_1bar.csv',
+    # '/1DFCO2_5bar.csv',
+    '/1DFCO2_8bar.csv',
+    # '/1DFCO2_12bar.csv',
+    # '/1DFCO2_19bar.csv',
+    # '/1DFCO2_25bar.csv',
+    '/1DFCO2_30bar.csv',
     #'/1DREAL_EGR_AP1bar2_M12.csv',
     #'/1DCO2_AP5bar_M12.csv',
     # '/1DCO2_AP.csv',
@@ -66,7 +79,9 @@ mech=[#'Polimi',
       '1bar',
       '5bar',
       ]
-symbols = ['o-','o-','x--','x--']
+symbols = ['o-','x-','s-',#'^-','v-','<-','>-',
+           'o--','x--','s--',#'^--','v--','<--','>--',
+           ]
 markers = ['o','x','s']
 
 def update_prop(handle, orig):
@@ -102,8 +117,13 @@ for i,var in enumerate(var_to_plot):
         print(data)
         
         labels = [
-                 r'$\ \%P_{bar}$'+':'+str(1.0)+' ',
-                 r'$\ \%P_{bar}$'+':'+str(8.0)+' ',
+                 r'$\ P_{bar}$'+':'+str(1.0)+' ',
+                #  r'$\ P_{bar}$'+':'+str(5.0)+' ',
+                 r'$\ P_{bar}$'+':'+str(8.0)+' ',
+                #  r'$\ P_{bar}$'+':'+str(12.0)+' ',
+                #  r'$\ P_{bar}$'+':'+str(19.0)+' ',
+                #  r'$\ P_{bar}$'+':'+str(25.0)+' ',
+                 r'$\ P_{bar}$'+':'+str(30.0)+' ',
                 #  +'('+
                 #  mech[j%2]
                 #  +')'
@@ -119,6 +139,7 @@ for i,var in enumerate(var_to_plot):
         if(var=='dF'):
             data=data*1e6
 
+        print("j=",j)
         d = data.plot(#y=var,
                   ax=ax,style=symbols[j],
                   #label=label,#color=colors[i*j]
@@ -138,6 +159,7 @@ for i,var in enumerate(var_to_plot):
               #+str(round(input['Tin'][0],1))
               +str(393)
               +'K'+ "}$"+')'
+              +' - EGR rate : '+str(round(input['EGR'][0]*100,1))+r'$\%$'
               )
 
     #add a second legend to show each marker for each mech
@@ -149,7 +171,7 @@ for i,var in enumerate(var_to_plot):
             label='CO2', 
             c='black',
             )
-    ax2.plot([],[],symbols[2],
+    ax2.plot([],[],symbols[Ncurves],
         label='FCO2', 
         c='black',
         )
@@ -168,7 +190,7 @@ for i,var in enumerate(var_to_plot):
     #                         'lines.markersize': 15,
     #                         })
     plt.savefig(path+'/img/'+
-                'FCO2_8b'+
+                '(F)CO2_pressure'+
                 '_'+var+'.png')
 
     

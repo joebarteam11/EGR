@@ -70,7 +70,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
                 # Energy equation activated
                 f.energy_enabled = True
                 # mesh refinement
-                f.set_refine_criteria(ratio = 7.5, slope = 0.75, curve = 0.75)
+                f.set_refine_criteria(ratio = 7.0, slope = 0.75, curve = 0.75)
                 # Calculation
                 if(verbose>0):
                     if(verbose>1):
@@ -243,7 +243,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         #################
         # Energy equation activated
         f.energy_enabled = True
-        f.set_refine_criteria(ratio = 5.0, slope = 0.05, curve = 0.05, prune = 0.01)
+        f.set_refine_criteria(ratio = 5.0, slope = 0.04, curve = 0.04, prune = 0.008)
         # Calculation
         if(verbose>0):
             if(verbose>1):
@@ -254,7 +254,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         try:
             if(verbose>1):
                 logprint('Inlet composition before f.solve',f.inlet.X)
-            f.solve(loglevel, refine_grid='disabled', auto=auto)
+            f.solve(loglevel, refine_grid='refine', auto=auto)
             T_flamme = f.T[-1]
             if(real_egr):
                 XCO2_2 = f.X[index,-1]

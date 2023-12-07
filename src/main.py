@@ -39,18 +39,17 @@ if __name__ == '__main__':
         # get the start time
         st = time.time()
 
-        templistOx = [300] #[i for i in np.arange(290,305,10.0)]
-        templistFuel = [300] #[i for i in np.arange(290,305,10.0)]
+        templistOx = [573] #[i for i in np.arange(290,305,10.0)]
+        templistFuel = [573] #[i for i in np.arange(290,305,10.0)]
         templistEGR = templistOx
         presslist= [1.0E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [i for i in np.arange(0.805,1.206,0.1)] # [0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
-        
+        phirange = [i for i in np.arange(0.605,1.206,0.1)] # [0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
         # fuelblendrange = [0.0] if no fuel blend needed
         fuelblendrange = [0.0]#[i for i in np.arange(0.0,0.301,0.100)] # 
         # egrrange = [0.0] if no dilution needed
-        egrrange = [0.35]#[i for i in np.arange(0.0,0.301,0.1)] 
+        egrrange = [0.0,0.1,0.2]#[i for i in np.arange(0.0,0.301,0.1)] 
 
-        config = case(['CH4:1.0','H2:1.0'],       #fuel compo   e.g. ['CH4:1.0','H2:1.0'] with fuel blend = [0.0] is equivalent to pure CH4 as fuel, with fuel blend = [0.1] is equivalent to 90% CH4 and 10% H2
+        config = case(['CH4:1.0','H2O:1.0'],       #fuel compo   e.g. ['CH4:1.0','H2:1.0'] with fuel blend = [0.0] is equivalent to pure CH4 as fuel, with fuel blend = [0.1] is equivalent to 90% CH4 and 10% H2
                     templistFuel,                 #tin fuel
                     presslist,                    #pin fuel
                     'O2:1.0 N2:3.76',             #ox compo
@@ -65,6 +64,7 @@ if __name__ == '__main__':
                     'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
                     path+'schemes/CH4_15_256_9_AP.cti',  #fuel mechanism
+                    #path+'schemes/BFER_methane.cti',
                     #'gri30.cti',
                     'Mix', #transport model
                     'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
@@ -86,18 +86,18 @@ if __name__ == '__main__':
     species_bg_output = ['CH4','O2','CO','CO2','H2O','N2']
 
     # tolerences for 1D flame solver
-    tol_ss = [2.0e-11, 1.0e-11]  # tolerance [rtol atol] for steady-state problem
-    tol_ts = [2.0e-11, 1.0e-11]  # tolerance [rtol atol] for time stepping
+    tol_ss = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
+    tol_ts = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for time stepping
 
-    real_egr = False
+    real_egr = True
     dry=True
     T_reinj= 573
 
     restart_rate = None
     if (real_egr):
-        save_file_name = path + "/results/" + dim + "M12_N2CO2H2OH2ReacOnly" + ".csv"
+        save_file_name = path + "/results/" + dim + "ARC_1b_EGR" + ".csv"
     else:
-        save_file_name = path + "/results/" + dim + "TEST" + ".csv"
+        save_file_name = path + "/results/" + dim + "ARC_1b" + ".csv"
 
     # MPI STUFF BELOW
     if ncpu==1:
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     if rank_0:
         df = output.round({'P':1,'Tin':1,'phi':2})
 
-        build_table = True 
+        build_table = False 
         if(build_table):
             table_generation(config,df,path) # <--df is the dataframe containing the results
 
