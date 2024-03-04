@@ -40,17 +40,17 @@ if __name__ == '__main__':
         formatted_date = now.strftime("%d_%m_%y_%H-%M-%S")
         print("Results saved on: ", formatted_date)
 
-        templistOx = [393] #[i for i in np.arange(290,305,10.0)]
-        templistFuel = [393] #[i for i in np.arange(290,305,10.0)]
+        templistOx = [300] #[i for i in np.arange(290,305,10.0)]
+        templistFuel = [300] #[i for i in np.arange(290,305,10.0)]
         templistEGR = templistOx
-        presslist= [1.01325E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange =  [i for i in np.arange(0.605,1.206,0.1)] # [0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
+        presslist= [1.0E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
+        phirange =  [i for i in np.arange(0.400,2.61,0.01)] # [0.85,0.1] # [0.6] [0.6,0.7,0.8,0.9,1.0,1.05,1.1005,1.2005,1.3005,1.4005]#
         
         # fuelblendrange = [0.0] if no fuel blend needed
         fuelblendrange = [0.0]#[i for i in np.arange(0.0,0.301,0.100)] # 
         # egrrange = [0.0] if no dilution needed
-        egrrange = [0.2]#[i for i in np.arange(0.0,0.301,0.1)] 
-        fuels = ['CH4:1.0','H2:1.0']
+        egrrange = [0]#[i for i in np.arange(0.0,0.301,0.1)] 
+        fuels = ['H2:1.0']
 
         config = case(fuels,       #fuel compo   e.g. ['CH4:1.0','H2:1.0'] with fuel blend = [0.0] is equivalent to pure CH4 as fuel, with fuel blend = [0.1] is equivalent to 90% CH4 and 10% H2
                     templistFuel,                 #tin fuel
@@ -58,7 +58,7 @@ if __name__ == '__main__':
                     'O2:1.0 N2:3.76',             #ox compo
                     templistOx,                   #tin ox
                     presslist,                    #pin ox
-                    'CO2:1.0',                    #egr compo
+                    'H2O:1.0',                    #egr compo
                     templistEGR,                  #tin egr
                     presslist,                    #pin egr
                     phirange,                     #[i for i in np.arange(0.60,2.51,0.1)],        #phi range
@@ -66,7 +66,7 @@ if __name__ == '__main__':
                     egrrange,                     #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                     'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
-                    'gri30.yaml',  #fuel mechanism
+                    './schemes/H2-SanDiego-Modified-Chemilum.yaml',  #fuel mechanism
                     #'gri30.yaml',
                     'Mix', #transport model
                     'no',  #is an ARC chemistry ? 'ARC' = yes, other = no
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     dim='1D'
     time_formated = time.strftime("%Y%m%d-%H%M%S")
     optimise_mpi_flame_order = False
-    species_bg_output = ['CH4','O2','CO','CO2','H2O','N2']
+    species_bg_output = ["H2", "H", "O2", "OH", "O", "H2O", "HO2", "H2O2", "N2", "OH*"]
 
     # tolerences for 1D flame solver
     tol_ss = [2.0e-5, 1.0e-9]  # tolerance [rtol atol] for steady-state problem

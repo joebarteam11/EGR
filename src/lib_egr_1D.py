@@ -49,7 +49,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     # Mesh refinement
     # f.set_refine_criteria(ratio = 7.0, slope = 0.95, curve = 0.95)
     # Max number of times the Jacobian will be used before it must be re-evaluated
-    f.set_max_jac_age(50, 50)
+    f.set_max_jac_age(10, 10)
     #Set time steps whenever Newton convergence fails
     f.set_time_step(1e-08, [25, 40, 80, 140, 200, 350, 500, 700, 1000, 1300, 1700, 2000, 3000, 5000, 10000, 12000, 15000, 20000]) #s
 
@@ -60,7 +60,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     criteria_list += [[5.0, 0.1, 0.1,0.01, True]] # Fourth iteration criterias
     criteria_list += [[5.0, 0.05, 0.05,0.01, True]] # Fifth iteration criterias
     criteria_list += [[4.0, 0.05, 0.05,0.01, True]] # Sixth iteration criterias
-    last_iteration = [3.0, 0.04, 0.04,0.008, True] # 7th iteration criterias
+    last_iteration = [4.0, 0.025, 0.025,0.005, True] # 7th iteration criterias
 
     
     while(True or i<maxegrate_iter):
@@ -84,10 +84,10 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
         # # Last iteration
         f.energy_enabled = True
         f.set_refine_criteria(ratio = last_iteration[0], slope = last_iteration[1], curve = last_iteration[2], prune = last_iteration[3])
-        T_flamme = f.T[-1]
+        
         i = " last iteration"
         f,sucess,XCO2_1 = flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,config,phi,egr,fb,dry,T_reinj,i)
-        
+        T_flamme = f.T[-1]
         if sucess:
             flame_saver(f,loglevel,flamename,hash,config)
             flame_saver_csv(f,config,phi,egr,fb)
@@ -125,7 +125,7 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=
     #get the temperature and pressure of the mixture according to phi and egr rate
     T,P,X = mixer(config,phi,egr,fb)
     gas=fresh_gas(phi,config,egr,T,P)
-    f = build_freeflame(gas)
+    f = build_freeflame(gas,width=0.02)
 
     f.flame.set_steady_tolerances(default=tol_ss)
     f.flame.set_transient_tolerances(default=tol_ts)
@@ -160,6 +160,10 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=
         f.inlet.T = T
         f.P = P
         f.inlet.X = X
+
+    f.inlet.T = T
+    f.P = P
+    f.inlet.X = X
 
     # alpha,beta=alpha_beta(f)
     # print('Alpha, beta',alpha_beta(f))
@@ -219,7 +223,8 @@ def fresh_gas(phi,config,egr_rate,Tmix,Pmix):
     return gas
 
 def build_freeflame(mix,width=0.03):
-    flame = ct.FreeFlame(mix, width=width)
+    grid = np.linspace(0, width, 100)
+    flame = ct.FreeFlame(mix, grid)
     return flame
 
 def flamme_thickness(f):
