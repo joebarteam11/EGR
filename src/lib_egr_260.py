@@ -48,7 +48,7 @@ class FlameExtinguished(Exception):
     pass
 
 class case:
-    def __init__(self,fuels,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,fuelblend_range,egr_range,fuelblend_unit,egr_unit,scheme,transport,isARC):
+    def __init__(self,fuels,Tinit_fuel,Pinit_fuel,ox,Tinit_ox,Pinit_ox,egr,Tinit_egr,Pinit_egr,phi_range,fuelblend_range,egr_range,fuelblend_unit,egr_unit,scheme,transport,isARC,saveCSV,saveCSVpath):
         self.compo = self.Compo(fuels,ox,egr)
         self.res = self.Reservoirs()
         self.gas = self.Gas(fuels,ox,egr)
@@ -76,6 +76,8 @@ class case:
         self.scheme = scheme
         self.transport = transport
         self.isARC = True if isARC == 'ARC' else False
+        self.saveCSV = saveCSV 
+        self.saveCSVpath = saveCSVpath
 
     class Gas:
         def __init__(self,fuels,ox,egr):
@@ -119,7 +121,7 @@ class case:
 
 def init_cases(config):
     if(config.isARC):
-        ct.compile_fortran(config.scheme.replace('.cti','.f90'))
+        ct.compile_fortran(config.scheme.replace('.yaml','.f90'))
 
 def stoechiometric_ratios(config):
     mw_o2 = config.gas.ox['O2'].molecular_weights/1000.0 #kg/mol
