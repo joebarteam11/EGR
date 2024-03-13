@@ -92,6 +92,7 @@ if __name__ == '__main__':
         # Open the file in append mode
         # Save config information in a text file
         config_info = f"Current folder: {path}\nRunning Cantera version: {ct.__version__}\nRunning on {ncpu} cores\nResults saved on: {formatted_date}\n"
+        config_info += f"scheme is {config.scheme}\ntransport model is {config.transport}\nARC chemistry is {config.isARC}\n"
         config_info += f"templistOx: {templistOx}\ntemplistFuel: {templistFuel}\ntemplistEGR: {templistEGR}\npresslist: {presslist}\nphirange: {phirange}\n"
         config_info += f"fuelblendrange: {fuelblendrange}\negrrange: {egrrange}\nconfig_file_path: {config_file_path}\n"
         config_info += f"fuels: {fuels}\n"
