@@ -13,24 +13,12 @@ print('Current folder: ',path)
 print(f"Running Matplotlib version: {matplotlib.__version__}")
 Ncurves = 2
 files=[
-    # '/1DNO_EGR_Aramco13.csv',
-    # '/1DCO2_Aramco13.csv',
-    # '/1DREAL_EGR_Aramco13.csv',
-    #'/1DCO2_Poli1bar_M12.csv',
-    #'/1DCO2_Poli5bar_M12.csv',
-    #'/1DCO2_AP1bar_M12.csv',
+
     '/1DCO2_AP.csv',
     '/1DFCO2_AP.csv',
     '/1DCO2_8AP.csv',
     '/1DFCO2_8AP.csv',
-    #'/1DREAL_EGR_AP1bar2_M12.csv',
-    #'/1DCO2_AP5bar_M12.csv',
-    # '/1DCO2_AP.csv',
-    # '/1DREAL_EGR_AP.csv',
-    #'/1DNO_EGR_H2_AP.csv',
-    #'/1DREAL_EGR_EGR_0.1.csv',
-    #'/1DCO2_AP5bar_M12.csv',
-    #'/CH4_15_256_9_AP.csv',
+
 ]
 files=[path+
        '/results'+

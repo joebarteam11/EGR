@@ -9,6 +9,7 @@ if __name__ == '__main__':
     # MPI STUFF BELOW
     try: 
         from mpi4py import MPI
+        # print('mpi loaded')
 
         # mpiprint("mpi4py properly installed, // available ",priority="info")
         MPI_LOADED=True
@@ -42,17 +43,18 @@ if __name__ == '__main__':
         now = datetime.now()
         formatted_date = now.strftime("%d_%m_%y_%H-%M-%S")
         mpiprint("Results saved on: " + str(formatted_date), file=sys.stdout)
-        templistOx = [573] #[i for i in np.arange(450,660,50.0)]
+
+        templistOx = [393] #[i for i in np.arange(450,660,50.0)]
         templistFuel = templistOx #[i for i in np.arange(290,305,10.0)]
         templistEGR = templistOx
         presslist= [1.0E5] #[i for i in np.arange(1E5,1.4E5,0.2E5)]
-        phirange = [i for i in np.arange(0.605,1.21,0.1)]#[0.85,0.1] #[0.7,0.75,0.8,0.85,0.9,1.0,1.1,1.2]#
+        phirange = [i for i in np.arange(0.605,1.41,0.1)]#[0.85,0.1] #[0.7,0.75,0.8,0.85,0.9,1.0,1.1,1.2]#
         
         fuelblendrange = [0.0] #if no fuel blend needed
         # fuelblendrange = [0,0.1,0.2,0.3,0.4] #[i for i in np.arange(0.0,0.301,0.100)] # 
         # egrrange = [0.0] if no dilution needed
-        egrrange = [0.0,0.1,0.2]#[i for i in np.arange(0.0,0.301,0.1)]
-        fuels = ['CH4:1.0','H2O:1.0']
+        egrrange = [0.0,0.1]#[i for i in np.arange(0.0,0.301,0.1)]
+        fuels = ['CH4:1.0','H2:1.0']
 
         config = case(fuels,       #fuel compo   e.g. ['CH4:1.0','H2:1.0'] with fuel blend = [0.0] is equivalent to pure CH4 as fuel, with fuel blend = [0.1] is equivalent to 90% CH4 and 10% H2
                     templistFuel,                 #tin fuel
@@ -60,7 +62,7 @@ if __name__ == '__main__':
                     'O2:1.0 N2:3.76',             #ox compo
                     templistOx,                   #tin ox
                     presslist,                    #pin ox
-                    'CO2:1.0',                    #egr compo
+                    'FCO2:1.0',                    #egr compo
                     templistEGR,                  #tin egr
                     presslist,                    #pin egr
                     phirange,                     #[i for i in np.arange(0.60,2.51,0.1)],        #phi range
@@ -68,12 +70,14 @@ if __name__ == '__main__':
                     egrrange,                     #[i for i in np.linspace(0.0,0.6,30)],#[0.0,0.1,0.15,0.2],            #egr range
                     'mole',                       #fuelblend rate unit mole / mass
                     'mole',                       #egr rate unit mole / mass
-                    #path+'schemes/CH4_15_256_9_AP.cti',   # 'schemes/reducedS16R156QSS12_ANSALDO_HM.cti',  #fuel mechanism
-                    path+'schemes/BFER_methane.cti', 
-                    #'gri30.cti',
+                    path+'schemes/CH4_15_256_9_AP.yaml',   # 'schemes/reducedS16R156QSS12_ANSALDO_HM.cti',  #fuel mechanism
+                    # path+'schemes/CH4H2NOx_19_154_13_MT.cti',   # 'schemes/reducedS16R156QSS12_ANSALDO_HM.cti',  #ox mechanism
+                    # path+'schemes/AP_NOx.cti',   # 'schemes/reducedS16R156QSS12_ANSALDO_HM.cti',  #ox mechanism
+                    # path+'schemes/C1C3_NOx_180501.cti', 
+                    # 'gri30.cti',
                     'Mix', #transport model
-                    'no',  #is an ARC chemistry ? 'ARC' = yes, other = no
-                    saveCSV=True, # Save csv result ? 
+                    'ARC',  #is an ARC chemistry ? 'ARC' = yes, other = no
+                    saveCSV=False, # Save csv result ? 
                     saveCSVpath=path+'/results/'+formatted_date, #path to save csv
                     )
         
@@ -86,21 +90,21 @@ if __name__ == '__main__':
         init_cases(config)
 
 
-        # Specify the file path
-        config_file_path = config.saveCSVpath+"/aREADME.txt"
+        # # Specify the file path
+        # config_file_path = config.saveCSVpath+"/aREADME.txt"
 
-        if not os.path.exists(config.saveCSVpath):
-            os.makedirs(config.saveCSVpath)
+        # if not os.path.exists(config.saveCSVpath):
+        #     os.makedirs(config.saveCSVpath)
 
-        # Open the file in append mode
-        # Save config information in a text file
-        config_info = f"Current folder: {path}\nRunning Cantera version: {ct.__version__}\nRunning on {ncpu} cores\nResults saved on: {formatted_date}\n"
-        config_info += f"templistOx: {templistOx}\ntemplistFuel: {templistFuel}\ntemplistEGR: {templistEGR}\npresslist: {presslist}\nphirange: {phirange}\n"
-        config_info += f"fuelblendrange: {fuelblendrange}\negrrange: {egrrange}\nconfig_file_path: {config_file_path}\n"
-        config_info += f"fuels: {fuels}\n"
+        # # Open the file in append mode
+        # # Save config information in a text file
+        # config_info = f"Current folder: {path}\nRunning Cantera version: {ct.__version__}\nRunning on {ncpu} cores\nResults saved on: {formatted_date}\n"
+        # config_info += f"templistOx: {templistOx}\ntemplistFuel: {templistFuel}\ntemplistEGR: {templistEGR}\npresslist: {presslist}\nphirange: {phirange}\n"
+        # config_info += f"fuelblendrange: {fuelblendrange}\negrrange: {egrrange}\nconfig_file_path: {config_file_path}\n"
+        # config_info += f"fuels: {fuels}\n"
 
-        with open(config_file_path, "w") as file:
-            file.write(config_info)
+        # with open(config_file_path, "w") as file:
+        #     file.write(config_info)
 
 
     else:
@@ -108,22 +112,22 @@ if __name__ == '__main__':
 
     dim='1D'
     time_formated = time.strftime("%Y%m%d-%H%M%S")
-    optimise_mpi_flame_order = False
-    species_bg_output = ['CH4','O2','CO','CO2','H2O','N2']
+    optimise_mpi_flame_order = True
+    species_bg_output = ['CH4','H2','O2','CO','CO2','H2O','N2']#,'NO','NO2']
 
     # tolerences for 1D flame solver
-    tol_ss = [2.0e-6, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
-    tol_ts = [2.0e-6, 1.0e-9]  # tolerance [rtol atol] for time stepping
+    tol_ss = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for steady-state problem
+    tol_ts = [2.0e-9, 1.0e-9]  # tolerance [rtol atol] for time stepping
 
-    real_egr = True
+    real_egr = False
     dry=True
-    T_reinj= 573
+    T_reinj= 600
 
     restart_rate = None
     if (real_egr):
-        save_file_name = path + "/results/" + dim + "BFER_1b_EGR" + ".csv"
+        save_file_name = path + "/results/" + dim + "_EGR_mai24_AP" + ".csv"
     else:
-        save_file_name = path + "/results/" + dim + "GRI-FOR-TEST-AFTER-CHANGE" + ".csv"
+        save_file_name = path + "/results/" + dim + "_FCO2_mai24_AP" + ".csv"
 
     # MPI STUFF BELOW
     if ncpu==1:

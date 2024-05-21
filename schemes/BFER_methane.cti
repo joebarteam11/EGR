@@ -6,9 +6,9 @@
 units(length = "cm", time = "s", quantity = "mol", act_energy = "cal/mol")
 
 
-ideal_gas(name = "CH4_BFER",
+ideal_gas(name = "CH4-AIR-2S-BFER_FLAMMABLE",
       elements = " O  H  C N ",
-      species = """ O2 H2O CH4 CO CO2 FCO2 N2 """,
+      species = """ O2 H2O CH4 CO CO2 N2 """,
       reactions = "all",
       initial_state = state(temperature = 300.0,
                         pressure = OneAtm)    )
@@ -31,9 +31,9 @@ ideal_gas(name = "CH4_BFER_multi",
                         pressure = OneAtm)    )
 
 
-ideal_gas(name = "CH4_BFER_avbp7",
+ideal_gas(name = "CH4-AIR-2S-BFER_FLAMMABLE",
       elements = " O  H  C  N Ar",
-      species = """ CH4 CO2 FCO2 CO O2 H2O N2 """,
+      species = """ CH4 CO2 CO O2 H2O N2 """,
       reactions = "all",
       transport = "AVBP",
       initial_state = state(temperature = 300.0,

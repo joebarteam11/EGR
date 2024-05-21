@@ -3,17 +3,18 @@ import h5py
 from write_table import write_table_hdf
 import os
 
-
+try_restore = False
 
 
 def flame_saver(f,loglevel,flamename,hash,config):
     try:
         # if hash is an existing file 
-        if os.path.isfile(hash):
-            logprint('Flame file '+hash+' is already existant, will not overwrite')
-        else:
-            logprint('Saving flame to file '+hash)
-            f.save(hash, loglevel=loglevel, description=flamename + "\n Cantera version "+ct.__version__+' with '+config.transport+' transport model and mechanism '+config.scheme )
+        # if os.path.isfile(hash):
+        #     # logprint('Flame file '+hash+' is already existant, will not overwrite')
+        #     f.save(hash, loglevel=loglevel, description=flamename + "\n Cantera version "+ct.__version__+' with '+config.transport+' transport model and mechanism '+config.scheme )
+        # else:
+        logprint('Saving flame to file '+hash)
+        f.save(hash, loglevel=loglevel, description=flamename + "\n Cantera version "+ct.__version__+' with '+config.transport+' transport model and mechanism '+config.scheme )
     except:
         logprint('Cannot save flame to file '+flamename)
 
@@ -44,7 +45,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     verbose = 0
     loglevel  = 0                      # amount of diagnostic output (0 to 5)	    
     refine_grid = 'refine' #True                  # True to enable refinement, False to disable 	
-    f.max_time_step_count=75000
+    f.max_time_step_count=10000
     f.max_grid_points=1000
     auto = False
 
@@ -55,18 +56,18 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
     # Mesh refinement
     # f.set_refine_criteria(ratio = 7.0, slope = 0.95, curve = 0.95)
     # Max number of times the Jacobian will be used before it must be re-evaluated
-    f.set_max_jac_age(50, 50)
+    f.set_max_jac_age(10, 10)
     #Set time steps whenever Newton convergence fails
-    f.set_time_step(1e-08, [25, 40, 80, 140, 200, 350, 500, 700, 1000, 1300, 1700, 2000, 3000, 5000, 10000, 12000, 15000, 20000]) #s
+    f.set_time_step(1e-08, [25, 40, 80, 140, 200]) #s
 
     # criteria_list determines the number of iterations that you want and tells : ratio, slope, curve, prune and energy enabled
     criteria_list = [[7.0, 0.95, 0.95,0, False]] # First iteration criterias ( 0 prune means disable)
-    criteria_list += [[7.0, 0.75, 0.75,0, True]] # Second iteration criterias
+    criteria_list += [[5.0, 0.5, 0.5,0, True]] # Second iteration criterias
     criteria_list += [[5.0, 0.4, 0.4,0.03, True]] # Third iteration criterias
     criteria_list += [[5.0, 0.1, 0.1,0.01, True]] # Fourth iteration criterias
     criteria_list += [[5.0, 0.05, 0.05,0.01, True]] # Fifth iteration criterias
     criteria_list += [[4.0, 0.05, 0.05,0.01, True]] # Sixth iteration criterias
-    last_iteration = [3.0, 0.04, 0.04,0.008, True] # 7th iteration criterias
+    last_iteration = [3.0, 0.05, 0.05, 0.01, True] # 7th iteration criterias
 
 
     while(True or i<maxegrate_iter):
@@ -113,7 +114,7 @@ def solve_flame(f,hash,flamename,config,phi,egr,fb,real_egr=False,dry=False,T_re
             break
         i+=1
         if(i>maxegrate_iter):
-            T_flamme = np.Inf
+            T_flamme = f.T[-1]
             logprint('Too many iterations of solve_flame for real_egr loop, for flame ',hash,' cannot converge')
             break
     return f,T_flamme
@@ -149,7 +150,7 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=
 
     flamefile = path+'/data/'+hash+'.yaml'
     restore_success = False
-    if os.path.isfile(flamefile):
+    if os.path.isfile(flamefile) and try_restore:
         logprint('Flame file '+flamefile+' is found')
         try:
             f.restore(flamefile, loglevel=1)
@@ -189,7 +190,7 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=
     #max of heat release rate
     hr_max = np.max(f.heat_release_rate)
 
-    #f.write_AVBP(path+'/'+'CH4_phi073'+'.csv')
+    #f.write_AVBP(path+'/'+'CH4_AP_phi08'+'.csv')
     #print("Mean molecular weight: ",f.gas.mean_molecular_weight)
 
     if(real_egr):
@@ -201,19 +202,21 @@ def compute_solutions_1D(config,phi,tin,pin,egr,fb,restart_rate,real_egr,tol_ss=
     # iH2O = f.X[f.gas.species_index('H2O'),0]
 
     #for all non zero massfractions at inlet, build a list of species names and associated mass fractions
-    i_species_names = ['Yi_'+specie for specie in f.gas.species_names if f.inlet.Y[f.gas.species_index(specie)] != 0.0]
-    logprint('i_species_names',i_species_names)
-    i_species_massfractions = [f.inlet.Y[f.gas.species_index(specie)] for specie in f.gas.species_names if f.inlet.Y[f.gas.species_index(specie)] != 0.0]
-    logprint('i_species_massfractions',i_species_massfractions)
+    # i_species_names = ['Yi_'+specie for specie in f.gas.species_names if f.inlet.Y[f.gas.species_index(specie)] != 0.0]
+    # logprint('i_species_names',i_species_names)
+    # i_species_massfractions = [f.inlet.Y[f.gas.species_index(specie)] for specie in f.gas.species_names if f.inlet.Y[f.gas.species_index(specie)] != 0.0]
+    # logprint('i_species_massfractions',i_species_massfractions)
 
-    vartosave = vars+i_species_names+species
+    vartosave = vars+species
+                # i_species_names+
+                # species
     df =  pd.DataFrame(columns=vartosave)
 
     #ambiguous definition with fuel blends
     max_omega0_fuel = np.max([omega0[f.gas.species_index(specie.split(':')[0])] for specie in config.compo.fuels])
     
     index = [f.gas.species_index(specie) for specie in species]
-    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, T_flamme,SL0,flamme_thickness(f),hr_max,f.density[0],f.density[-1],max_omega0_fuel,]+i_species_massfractions+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
+    df = pd.concat([df, pd.DataFrame([[egr,fb, phi,1/phi, P, T, T_flamme,SL0,flamme_thickness(f),hr_max,f.density[0],f.density[-1],max_omega0_fuel,]+list(f.X[index,-1])], columns=vartosave)]).astype(float) #+list(f.X[index][-1])] #
     # duplicate 10 times the first line
     #df = pd.concat([df]*5, ignore_index=True)
     #print(df)
@@ -446,6 +449,7 @@ def flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,confi
             logprint('Iteration n'+str(i))
         
     try:
+        residual = 1.0
         if(verbose>1):
             logprint('Inlet composition before f.solve',f.inlet.X,file=sys.stdout)
         f.solve(loglevel, refine_grid, auto)
@@ -455,7 +459,6 @@ def flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,confi
             # print('init egr loop')
             index = f.gas.species_index('CO2')
             XCO2_1 = f.X[index,-1]
-            residual = 1.0
             f = apply_egr_to_inlet(f,config,phi,egr,fb,dry,T_reinj)
             if(verbose>0):
                 logprint('EGR applied to inlet',file=sys.stdout)
@@ -471,7 +474,6 @@ def flame_iteration(f,verbose,loglevel,refine_grid,auto,real_egr,flamename,confi
                 logprint('EGR applied to inlet')
         else:
             XCO2_1 = 0.0
-            residual = 1.0
 
     except FlameExtinguished:
         logprint('Flame '+flamename +': ',file=sys.stdout)
